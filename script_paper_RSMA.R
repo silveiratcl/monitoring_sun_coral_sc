@@ -1,7 +1,5 @@
 # Script RSMA
 
-
-
 ################################################################################
 # 0. Packages
 ################################################################################
@@ -50,11 +48,6 @@ df_monit = read_delim("data/dados_monitoramento_cs_2025-04-30.csv",
 spec(df_monit)
 df_monit[2000,]
 
-# add column localidade_rebio
-
-unique(df_monit$localidade_rebio)
-
-
 
 df_monit <- df_monit %>%
   mutate(localidade_rebio = if_else(localidade %in% c("rancho_norte",
@@ -84,7 +77,7 @@ df_monit <- df_monit %>%
                              "saco_do_capim"), "entorno_imediato", "entorno")))
 
 
-
+df_monit$localidade_rebio
 
 
 # localities - from shape data to get the extent of each locality
@@ -108,23 +101,12 @@ df_localidade_raw %>%
 summary(df_localidade_raw$comp_m)
 
 
-
-
-
-
-
-
 df_localidade = df_localidade %>% 
   mutate(localidade = str_to_upper(str_replace_all(localidade, "_", " ")))
 
 df_localidade
 
 df_localidade$comp_m = df_localidade$comp_m/1000
-df_localidade$comp_m/1
-
-
-# df_localidade <- df_localidade %>%
-#   mutate(comp_km = comp_m / 1000)
 
 
 
@@ -208,23 +190,6 @@ print(df_monit_effort, n= 140
 )
 
 
-#### TEST df
-
-#df_monit %>% 
-# filter(dafor > 0 , metodo == "scuba", obs != "estimado dos dados do ICMBio", obs != "Sem geo" ) %>% 
-# print( n=63)
-
-#df_monit_effort %>% 
-#filter(obs == "estimado dos dados do ICMBio") 
-
-
-#df_monit_effort %>% 
-#filter(faixa_bat != "Na") 
-
-#df_monit_effort %>% 
-#filter(faixa_bat == "Na") 
-
-#### df
 
 ############# Relative abundance index weighed by effort
 ######################
@@ -297,9 +262,9 @@ library(hrbrthemes)
 
 # Positive instead DAFOR
 # Getting the numbers
-#df_monit_dafor
-#table(df_monit_dafor$dafor_DAFOR)
-#length(df_monit_dafor$dafor_DAFOR)
+# df_monit_dafor
+# table(df_monit_dafor$dafor_DAFOR)
+# length(df_monit_dafor$dafor_DAFOR)
 
 df_monit
 table(df_monit$dafor)
@@ -318,7 +283,7 @@ df_table  = df_monit %>%
 table(df_table$dafor)
 sum(table(df_table$dafor))
 
-
+################################################################################
 # Figure 2
 # Sampling effort expressed as the number of minutes spent at each surveyed site
 
@@ -366,13 +331,11 @@ plot_transec_strata_english <- df_monit_effort %>%
     strip.text.y = element_text(size = 10)
   )
 
+x11()
 plot_transec_strata_english
-ggsave("plots/transec_batimetria_english.png", width = 10, height = 15, dpi = 300)
+ggsave("figs/fig_2_transec_batimetria_english.png", width = 10, height = 15, dpi = 300)
 
 
-
-# Figure 3
-# Number of detections and transects by bathymetric range
 ################################################################################
 # FIGURE 3
 # Number of detections and cumulative sampled depths by bathymetric range
@@ -382,7 +345,7 @@ ggsave("plots/transec_batimetria_english.png", width = 10, height = 15, dpi = 30
 #          monitored depth of each transect, using 0.5 m intervals
 ################################################################################
 ################################################################################
-# 1. Parameters
+# 3.1. Parameters
 ################################################################################
 
 depth_levels_fig3 <- c(
@@ -403,7 +366,7 @@ max_or_na <- function(x) {
 }
 
 ################################################################################
-# 2. Prepare independent monitored transects
+# 3.2. Prepare independent monitored transects
 #
 # dafor_id identifies the monitored transect.
 # The repeated minute rows are reduced to one row per transect.
@@ -440,7 +403,7 @@ transects_fig3 <- df_monit %>%
   filter(prof_max_num >= prof_min_num)
 
 ################################################################################
-# 3. Panel A - corrected number of detections by bathymetric range
+# 3.3. Panel A - corrected number of detections by bathymetric range
 #
 # This follows the old figure logic of assigning each detection to a depth
 # range according to the maximum depth monitored in its transect, but now
@@ -475,7 +438,7 @@ df_depth_corrected <- transects_fig3 %>%
 print(df_depth_corrected, n = Inf)
 
 ################################################################################
-# 4. Diagnostic - compare corrected Panel A against the old code route
+# 3.4. Diagnostic - compare corrected Panel A against the old code route
 #
 # The old code omitted dafor_id from its grouping. If this table shows the
 # same values, Panel A from the paper is already safe. If values differ, the
@@ -521,7 +484,7 @@ panel_a_check <- df_depth_corrected %>%
 print(panel_a_check, n = Inf)
 
 ################################################################################
-# 5. Panel B - cumulative sampled depths in 0.5 m intervals
+# 3.5. Panel B - cumulative sampled depths in 0.5 m intervals
 #
 # This reconstructs the missing depth_density object:
 # every transect contributes to each 0.5 m interval overlapped by its recorded
@@ -556,7 +519,7 @@ depth_density <- transects_fig3 %>%
 print(depth_density, n = Inf)
 
 ################################################################################
-# 6. Create Panel A
+# 3.6. Create Panel A
 ################################################################################
 
 p1 <- ggplot(
@@ -584,13 +547,13 @@ p1 <- ggplot(
     axis.line.x = element_line(colour = "grey", linewidth = 0.8),
     axis.line.y = element_line(colour = "grey", linewidth = 0.8),
     axis.title.x = element_blank(),
-    axis.title.y = element_text(size = 15),
-    axis.text.y = element_text(size = 15),
-    axis.text.x = element_text(size = 15)
+    axis.title.y = element_text(size = 18),
+    axis.text.y = element_text(size = 18),
+    axis.text.x = element_text(size = 18)
   )
 
 ################################################################################
-# 7. Create Panel B
+# 3.7. Create Panel B
 ################################################################################
 
 max_effort <- ceiling(max(depth_density$effort_per_m, na.rm = TRUE))
@@ -622,60 +585,49 @@ p2 <- ggplot(
     axis.ticks.x = element_line(colour = "grey", linewidth = 0.8),
     axis.line.x = element_line(colour = "grey", linewidth = 0.8),
     axis.line.y = element_line(colour = "grey", linewidth = 0.8),
-    axis.title.x = element_text(size = 15),
-    axis.title.y = element_text(size = 15),
-    axis.text.y = element_text(size = 15),
-    axis.text.x = element_text(size = 15)
+    axis.title.x = element_text(size = 18),
+    axis.title.y = element_text(size = 18),
+    axis.text.y = element_text(size = 18),
+    axis.text.x = element_text(size = 18)
   )
 
 ################################################################################
-# 8. Combine Figure 3
+# 3.8. Combine Figure 3
 ################################################################################
 
 figure_3 <- (p1 / p2) +
   plot_layout(heights = c(1, 1)) +
   plot_annotation(tag_levels = "A") &
   theme(
-    plot.tag = element_text(face = "bold", size = 16),
+    plot.tag = element_text(face = "bold", size = 18),
     plot.tag.position = c(0.98, 0.98)
   )
 
 figure_3
 
 ################################################################################
-# 9. Export
+# 3.9. Export
 ################################################################################
 
-dir.create("plots", recursive = TRUE, showWarnings = FALSE)
 
-ggsave(
-  filename = "plots/figure_3_detections_depth_sampling.png",
-  plot = figure_3,
-  width = 10,
-  height = 10,
-  dpi = 300
-)
 
-ggsave(
-  filename = "plots/figure_3_detections_depth_sampling.pdf",
-  plot = figure_3,
-  width = 10,
-  height = 10
-)
+x11()
+figure_3
+ggsave("figs/fig_3_detections_depth_sampling.png", width = 15, height = 13, dpi = 300)
 
 
 
 
+
+
+################################################################################
 # Figure 4
-# Annual distribution of records across DAFOR and RAI-W. 
-
-################################################################################
 # ANNUAL FIGURE
 # Panel A: Annual DPUE partitioned by DAFOR category
 # Panel B: Annual RAI-W partitioned by bathymetric stratum
 ################################################################################
 ################################################################################
-# 1. Parameters
+# 4.1. Parameters
 ################################################################################
 
 dafor_levels <- c("D", "A", "F", "O", "R")
@@ -721,7 +673,7 @@ max_or_na <- function(x) {
 }
 
 ################################################################################
-# 2. Locality groups
+# 4.2. Locality groups
 ################################################################################
 
 rebio_localities <- c(
@@ -752,7 +704,7 @@ near_rebio_localities <- c(
 )
 
 ################################################################################
-# 3. Locality extent
+# 4.3. Locality extent
 ################################################################################
 
 df_localidade_annual <- read_delim(
@@ -769,7 +721,7 @@ df_localidade_annual <- read_delim(
   select(localidade, extent_m, Uni100m)
 
 ################################################################################
-# 4. Prepare minute-level records
+# 4.4. Prepare minute-level records
 #
 # One row = one monitored minute
 # dafor_id = one monitored transect
@@ -822,7 +774,7 @@ df_annual_minutes <- df_monit %>%
   )
 
 ################################################################################
-# 5. Annual annotations
+# 4.5. Annual annotations
 #
 # These annotations refer to total monitored one-minute records and absent
 # one-minute records in each year.
@@ -842,7 +794,7 @@ annual_annotations <- df_annual_minutes %>%
 print(annual_annotations, n = Inf)
 
 ################################################################################
-# 6. PANEL A
+# 4.6. PANEL A
 # Annual DPUE partitioned by DAFOR category
 #
 # For each transect and DAFOR category:
@@ -946,14 +898,14 @@ plot_dpue_by_year <- ggplot(
     axis.title.x = element_blank(),
     axis.text.x = element_blank(),
     axis.text.y = element_text(size = 12),
-    axis.title.y = element_text(size = 14),
+    axis.title.y = element_text(size = 16),
     legend.text = element_text(size = 12),
     legend.key.size = unit(0.8, "cm"),
     legend.position = "right"
   )
 
 ################################################################################
-# 7. PANEL B
+# 4.7. PANEL B
 # Annual RAI-W partitioned by depth stratum
 ################################################################################
 
@@ -1034,9 +986,9 @@ plot_raiw_by_year <- ggplot(
     axis.line = element_line(),
     panel.border = element_blank(),
     axis.title.x = element_blank(),
-    axis.text.x = element_text(size = 12),
+    axis.text.x = element_text(size = 16),
     axis.text.y = element_text(size = 12),
-    axis.title.y = element_text(size = 14),
+    axis.title.y = element_text(size = 16),
     legend.title = element_text(size = 12),
     legend.text = element_text(size = 12),
     legend.key.size = unit(0.8, "cm"),
@@ -1044,7 +996,7 @@ plot_raiw_by_year <- ggplot(
   )
 
 ################################################################################
-# 8. Combine panels
+# 4.8. Combine panels
 ################################################################################
 
 annual_figure <- (
@@ -1067,26 +1019,19 @@ annual_figure <- (
     plot.tag.position = c(0, 1)
   )
 
-annual_figure
 
+
+x11()
+annual_figure
 ggsave(
-  filename = "plots/figure4_annual_dpue_raiw_manual_weights.png",
+  filename = "figs/fig_4_anual_DPUE_RAIW.png",
   plot = annual_figure,
-  width = 12,
-  height = 8,
+  width = 18,
+  height = 15,
   dpi = 300
 )
 
-ggsave(
-  filename = "plots/figure4_annual_dpue_raiw_manual_weights.pdf",
-  plot = annual_figure,
-  width = 12,
-  height = 8
-)
 
-
-# Figure 5
-# Monitoring metrics derived from the monitoring data. 
 
 ################################################################################
 # FIGURE 5
@@ -1101,33 +1046,10 @@ ggsave(
 
 
 ################################################################################
-# 1. Import monitoring data
+# 5.1. Data
 ################################################################################
 
-df_monit <- read_delim(
-  "data/dados_monitoramento_cs_2025-04-30.csv",
-  col_types = cols(
-    localidade    = col_character(),
-    data          = col_date(format = "%d/%m/%Y"),
-    visib_horiz   = col_double(),
-    faixa_bat     = col_character(),
-    prof_min      = col_double(),
-    prof_max      = col_double(),
-    metodo        = col_character(),
-    observer      = col_character(),
-    n_divers      = col_double(),
-    tempo_censo   = col_double(),
-    dafor         = col_double(),
-    iar_medio     = col_double(),
-    n_trans_vis   = col_double(),
-    n_trans_pres  = col_double(),
-    dafor_id      = col_double(),
-    geo_id        = col_character(),
-    obs           = col_character(),
-    id_horus      = col_double()
-  ),
-  show_col_types = FALSE
-)
+head(df_monit) 
 
 ################################################################################
 # 2. Import locality extent
@@ -1160,7 +1082,7 @@ df_localidade_fig5 %>%
   print(n = Inf)
 
 ################################################################################
-# 3. Parameters used in Figure 5
+# 5.3. Parameters used in Figure 5
 ################################################################################
 
 depth_levels <- c(
@@ -1177,7 +1099,7 @@ depth_colors <- c(
   "14.1m+"  = "#536e99"
 )
 
-# Manual DAFOR weights established for the publication analysis
+# Manual DAFOR weights 
 manual_weights <- c(
   `10` = 1.00,  # Dominant
   `8`  = 0.80,  # Abundant
@@ -1188,7 +1110,7 @@ manual_weights <- c(
 )
 
 ################################################################################
-# 4. Helper functions
+# 5.4. Helper functions
 ################################################################################
 
 clean_num <- function(x) {
@@ -1210,7 +1132,7 @@ max_or_na <- function(x) {
 }
 
 ################################################################################
-# 5. Prepare minute-level monitoring data
+# 5.5. Prepare minute-level monitoring data
 #
 # Each row represents one monitored minute.
 # Each transect is identified by dafor_id.
@@ -1246,10 +1168,10 @@ df_monit_fig5 <- df_monit %>%
   )
 
 ################################################################################
-# 6. Data quality checks before metric calculation
+# 5.6. Data quality checks before metric calculation
 ################################################################################
 
-# 6.1 Check DAFOR values represented in the analysis
+# 5.6.1 Check DAFOR values represented in the analysis
 df_monit_fig5 %>%
   count(dafor_num, weight) %>%
   arrange(desc(dafor_num)) %>%
@@ -1279,7 +1201,7 @@ if (nrow(check_transect_identity) > 0) {
   print(check_transect_identity, n = Inf)
 }
 
-# 6.3 Check number of minute rows against repeated n_trans_vis
+# 5.6.2 Check number of minute rows against repeated n_trans_vis
 #
 # Expected in most cases:
 # rows_minutes == n_trans_vis
@@ -1316,7 +1238,7 @@ if (nrow(check_missing_extent) > 0) {
 }
 
 ################################################################################
-# 7. DPUE
+# 5.7. DPUE
 #
 # DPUE = Ndetec / (Nhours * Uni100m)
 #
@@ -1350,7 +1272,7 @@ df_monit_effort_dpue <- df_monit_fig5 %>%
   )
 
 ################################################################################
-# 8. RAI-W
+# 5.8. RAI-W
 #
 # RAI-W = sum_i w(s_i) / (Nhours * Uni100m)
 #
@@ -1384,14 +1306,14 @@ df_monit_effort_raiw <- df_monit_fig5 %>%
   )
 
 ################################################################################
-# 9. Inspect event-level metrics
+# 5.9. Inspect event-level metrics
 ################################################################################
 
 print(df_monit_effort_dpue, n = 140)
 print(df_monit_effort_raiw, n = 140)
 
 ################################################################################
-# 10. Values represented by the final stacked bars
+# 5.10. Values represented by the final stacked bars
 #
 # geom_col(position = "stack") sums transect-level standardized values within
 # locality and bathymetric stratum.
@@ -1420,7 +1342,7 @@ raiw_plot_values <- df_monit_effort_raiw %>%
   )
 
 ################################################################################
-# 11. Confirm ranking and range of the corrected figure
+# 5.11. Confirm ranking and range of the corrected figure
 #
 # Under the manual weights, ENGENHO is expected to be the highest RAI-W
 # locality, replacing NAUFRAGIO DO LILI from the exploratory gamma-based chart.
@@ -1460,7 +1382,7 @@ raiw_ranking %>%
   print()
 
 ################################################################################
-# 12. Check expected relationship between DPUE and RAI-W
+# 5.12. Check expected relationship between DPUE and RAI-W
 #
 # Because all manual weights are between 0 and 1 and use the same denominator,
 # RAI-W should not exceed DPUE for a comparable transect where presence was
@@ -1495,7 +1417,7 @@ metric_check %>%
   print(n = Inf)
 
 ################################################################################
-# 13. Theme for Figure 5
+# 5.13. Theme for Figure 5
 ################################################################################
 
 theme_fig5 <- theme(
@@ -1533,7 +1455,7 @@ theme_fig5 <- theme(
 )
 
 ################################################################################
-# 14. Panel A - DPUE
+# 5.14. Panel A - DPUE
 #
 # Values are already summarised for plotting by locality and depth stratum.
 ################################################################################
@@ -1565,7 +1487,7 @@ plot_dpue_strata <- dpue_plot_values %>%
   theme_fig5
 
 ################################################################################
-# 15. Panel B - RAI-W
+# 5.15. Panel B - RAI-W
 ################################################################################
 
 plot_raiw_strata <- raiw_plot_values %>%
@@ -1595,7 +1517,7 @@ plot_raiw_strata <- raiw_plot_values %>%
   theme_fig5
 
 ################################################################################
-# 16. Combined Figure 5
+# 5.16. Combined Figure 5
 ################################################################################
 
 figure_5 <- (plot_dpue_strata + plot_raiw_strata) +
@@ -1620,20 +1542,18 @@ figure_5 <- (plot_dpue_strata + plot_raiw_strata) +
 figure_5
 
 ################################################################################
-# 17. Export Figure 5
+# 5.17. Export Figure 5
 ################################################################################
-
-dir.create("plots", showWarnings = FALSE, recursive = TRUE)
-
+x11()
 ggsave(
-  filename = "plots/figure_5_dpue_raiw_manual_weights.png",
+  filename = "figs/fig_5_dpue_raiw_manual_weights.png",
   plot = figure_5,
   width = 12,
   height = 5,
   dpi = 300
 )
 
-
+################################################################################
 # end figure 5
 
 
