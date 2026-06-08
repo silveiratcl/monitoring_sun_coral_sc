@@ -80,12 +80,7 @@ df_monit <- df_monit %>%
 df_monit$localidade_rebio
 
 
-# localities - from shape data to get the extent of each locality
-
-df_localidade = read_delim("data/localidade_rebio2.csv", delim = ";", 
-                           col_types = c("i","c","c","d"))
-df_localidade
-print(df_localidade, n = 48)
+## localities - from shape data to get the extent of each locality
 
 df_localidade_raw <- read_delim(
   "data/localidade_rebio2.csv",
@@ -100,13 +95,14 @@ df_localidade_raw %>%
 
 summary(df_localidade_raw$comp_m)
 
-
-df_localidade = df_localidade %>% 
-  mutate(localidade = str_to_upper(str_replace_all(localidade, "_", " ")))
+df_localidade <- df_localidade_raw %>%
+  mutate(
+    localidade = str_to_upper(str_replace_all(localidade, "_", " ")),
+    extent_m  = comp_m / 1000,
+    Uni100m   = extent_m / 100
+  )
 
 df_localidade
-
-df_localidade$comp_m = df_localidade$comp_m/1000
 
 
 
