@@ -1,0 +1,5 @@
+response_model,predictor,estimate,std_error,statistic,p_value,r_squared,adj_r_squared
+DPUE_year_effort,year,0.1336,0.06283,2.126,0.0373,0.09544,0.06761
+DPUE_year_effort,effort_minutes,-0.001795,9.081e-4,-1.977,0.0523,0.09544,0.06761
+RAIW_year_effort,year,0.06028,0.02958,2.038,0.0456,0.07297,0.04445
+RAIW_year_effort,effort_minutes,-6.087e-4,4.276e-4,-1.424,0.159,0.07297,0.04445

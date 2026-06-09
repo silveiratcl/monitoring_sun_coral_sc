@@ -1,0 +1,7 @@
+comparison,spearman_rho
+Manual_vs_Moderate,0.9986
+Manual_vs_Linear,0.9964
+Moderate_vs_Linear,0.999
+Rank_Manual_vs_Moderate,0.9994
+Rank_Manual_vs_Linear,0.999
+Rank_Moderate_vs_Linear,0.9998
