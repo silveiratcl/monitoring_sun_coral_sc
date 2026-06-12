@@ -211,7 +211,7 @@ table_1_gt <- summary_table_region |>
   ) |>
   
   tab_options(
-    table.font.size = px(12),
+    table.font.size = px(14),
     heading.title.font.size = px(14),
     heading.subtitle.font.size = px(11),
     source_notes.font.size = px(10),
