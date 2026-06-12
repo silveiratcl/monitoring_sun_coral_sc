@@ -55,3 +55,4 @@ manual_weights <- c(
 
 dir.create("outputs", showWarnings = FALSE)
 dir.create("figs", showWarnings = FALSE)
+
