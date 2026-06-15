@@ -7,14 +7,14 @@ Repository containing all analyses used in:
 Workflow:
 
 R/
-00_setup.R
-01_prepare_monitoring_data.R
-02_prepare_site_year_metrics.R
-03_metric_relationship_and_effort.R
-04_raiw_sensitivity.R
-05_figures_dpue_raiw.R
-06_suplementary_tables.R
-07_summary_table.R
+- 00_setup.R
+- 01_prepare_monitoring_data.R
+- 02_prepare_site_year_metrics.R
+- 03_metric_relationship_and_effort.R
+- 04_raiw_sensitivity.R
+- 05_figures_dpue_raiw.R
+- 06_suplementary_tables.R
+- 07_summary_table.R
 
 Outputs generated automatically in /outputs.
 
