@@ -1,0 +1,7 @@
+monitoring_cycle,cycle_index,dataset,effort_minutes,positive_records,n_localities,n_sampling_dates
+2022/2023,1,Depth-complete dataset,3601,24,31,18
+2022/2023,1,General monitoring dataset,3601,24,31,18
+2023/2024,2,Depth-complete dataset,1515,31,12,8
+2023/2024,2,General monitoring dataset,1575,32,12,8
+2024/2025,3,Depth-complete dataset,3239,117,28,16
+2024/2025,3,General monitoring dataset,3239,117,28,16

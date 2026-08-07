@@ -1,0 +1,5 @@
+dataset,n_records,n_positive,n_localities,effort_hours
+Raw df_monit,8441,195,43,140.68333333333334
+General monitoring dataset,8415,173,43,140.25
+Depth-complete dataset,8355,172,43,139.25
+Monitoring records without bathymetric information,60,1,1,1

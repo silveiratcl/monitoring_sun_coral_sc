@@ -1,0 +1,4 @@
+monitoring_cycle,cycle_index,first_sampling_date,last_sampling_date,n_sampling_dates,n_localities,effort_minutes,positive_records
+2022/2023,1,2022-06-15,2023-05-05,18,31,3601,24
+2023/2024,2,2023-08-21,2024-05-13,8,12,1575,32
+2024/2025,3,2024-10-03,2025-04-08,16,28,3239,117
