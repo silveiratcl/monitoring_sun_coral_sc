@@ -1,0 +1,8 @@
+analysis,response,test,statistic,degrees_freedom,n_permutations,p_value
+Temporal,DPUE,Exact blocked permutation,2.6956521739130435,2,279936,0.30169753086419754
+Temporal,RAI-W,Exact blocked permutation,1.826086956521739,2,279936,0.4418724279835391
+Spatial,Detection frequency,Exact rank permutation,10.116185897435896,2,1681680,0.001714951714951715
+Spatial,Mean DAFOR weight,Exact rank permutation,9.443108974358966,2,1681680,0.0036213786213786215
+Spatial,Observed locality occurrence,Fisher exact,NA,NA,NA,0.0017482517482517532
+Bathymetric,Detection frequency,Exact blocked permutation,3.8181818181818183,2,7776,0.2222222222222222
+Bathymetric,Mean DAFOR weight,Exact blocked permutation,5.636363636363637,2,7776,0.05555555555555555

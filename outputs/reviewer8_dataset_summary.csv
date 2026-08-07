@@ -1,0 +1,5 @@
+dataset,n_records,n_positive,n_localities,effort_hours
+Raw dataset,8441,195,43,140.68333333333334
+Monitoring dataset 2022-2025,8415,173,43,140.25
+Monitoring records with prof_max,8185,173,43,136.41666666666666
+Monitoring records without prof_max,230,0,3,3.8333333333333335

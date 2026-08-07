@@ -36,10 +36,9 @@ site_year_metrics <- df_monit |>
     weight = coalesce(weight, 0)
   ) |>
   filter(
-    obs != "estimado dos dados do ICMBio",
-    faixa_bat != "Na",
+    year %in% 2022:2025,
+    coalesce(obs, "") != "estimado dos dados do ICMBio",
     !is.na(localidade),
-    !is.na(year),
     !is.na(dafor_id)
   ) |>
   group_by(localidade, year, region) |>

@@ -10,10 +10,21 @@
 
 df_monit <- read_delim(
   "data/dados_monitoramento_cs_2025-04-30.csv",
-  col_types = list(
+  delim = ";",
+  
+  # Values used in the original database to represent missing data
+  na = c("", "NA", "Na", "na"),
+  
+  # Avoid the empty 19th column created by the final semicolon in each row
+  col_select = 1:18,
+  
+  col_types = cols(
     localidade = col_character(),
     data = col_date(format = "%d/%m/%Y"),
-    visib_horiz = col_double(),
+    
+    # Mixed decimal separators in the source file
+    visib_horiz = col_character(),
+    
     faixa_bat = col_character(),
     prof_min = col_double(),
     prof_max = col_double(),
@@ -22,7 +33,10 @@ df_monit <- read_delim(
     n_divers = col_double(),
     tempo_censo = col_double(),
     dafor = col_double(),
-    iar_medio = col_double(),
+    
+    # Legacy field; not used in the present analyses
+    iar_medio = col_character(),
+    
     n_trans_vis = col_double(),
     n_trans_pres = col_double(),
     dafor_id = col_double(),
@@ -30,8 +44,11 @@ df_monit <- read_delim(
     obs = col_character(),
     id_horus = col_double()
   )
-)
-
+) |>
+  select(-any_of("...19")) |>
+  mutate(
+    visib_horiz = clean_num(visib_horiz)
+  )
 ################################################################################
 # Locality extent
 ################################################################################
@@ -39,15 +56,25 @@ df_monit <- read_delim(
 df_localidade <- read_delim(
   "data/localidade_rebio2.csv",
   delim = ";",
-  col_types = c("i","c","c","d")
+  locale = locale(decimal_mark = ","),
+  col_types = cols(
+    id = col_integer(),
+    localidade = col_character(),
+    loc_mapa = col_character(),
+    comp_m = col_double()
+  )
 ) |>
   mutate(
-    localidade = str_to_upper(
-      str_replace_all(localidade, "_", " ")
+    localidade = str_squish(
+      str_to_upper(
+        str_replace_all(localidade, "_", " ")
+      )
     ),
     
-    extent_m = comp_m / 1000,
+    # comp_m is already expressed in metres in the source file
+    extent_m = comp_m,
     
+    # Number of 100-m shoreline units
     Uni100m = extent_m / 100
   )
 
