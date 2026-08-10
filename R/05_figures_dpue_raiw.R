@@ -1,5 +1,5 @@
 ################################################################################
-# 06_figures_dpue_raiw.R
+# 05_figures_dpue_raiw.R
 #
 # Figure 4
 #
@@ -12,7 +12,6 @@
 
 source("R/00_setup.R")
 source("R/01_prepare_monitoring_data.R")
-source("R/02_prepare_site_year_metrics.R")
 
 ################################################################################
 # 0. Remove obsolete Figure 4 outputs
@@ -89,12 +88,12 @@ df_annual_minutes <- df_monit |>
     weight = coalesce(weight, 0)
   ) |>
   filter(
-    obs != "estimado dos dados do ICMBio",
-    faixa_bat != "Na",
-    !is.na(localidade),
-    !is.na(year),
-    !is.na(dafor_id)
-  ) |>
+  year(data) %in% 2022:2025,
+  coalesce(obs, "") != "estimado dos dados do ICMBio",
+  !is.na(localidade),
+  !is.na(dafor_id),
+  !is.na(region)
+) |>
   left_join(
     df_localidade |>
       select(
@@ -108,6 +107,16 @@ df_annual_minutes <- df_monit |>
     dafor_cat = factor(dafor_cat, levels = dafor_levels),
     faixa_bat_depth = factor(faixa_bat_depth, levels = depth_levels)
   )
+
+################################################################################
+# 2a. CHECK ANALYTICAL DATASET
+################################################################################
+
+stopifnot(
+  nrow(df_annual_minutes) == 8415,
+  sum(df_annual_minutes$dafor_num > 0, na.rm = TRUE) == 173,
+  n_distinct(df_annual_minutes$localidade) == 43
+)
 
 ################################################################################
 # 3. Locality-year denominator for RAI-W
@@ -241,7 +250,45 @@ plot_positive_dafor_by_year <- ggplot(
   )
 
 ################################################################################
-# 6. Panel B
+# 6. CHECK BATHYMETRIC INFORMATION
+################################################################################
+
+depth_figure_check <- df_annual_minutes |>
+  summarise(
+    records_with_depth =
+      sum(!is.na(faixa_bat_depth)),
+    
+    records_without_depth =
+      sum(is.na(faixa_bat_depth)),
+    
+    positive_with_depth =
+      sum(
+        dafor_num > 0 &
+          !is.na(faixa_bat_depth),
+        na.rm = TRUE
+      ),
+    
+    positive_without_depth =
+      sum(
+        dafor_num > 0 &
+          is.na(faixa_bat_depth),
+        na.rm = TRUE
+      )
+  )
+
+print(depth_figure_check)
+
+stopifnot(
+  depth_figure_check$records_with_depth == 8185,
+  depth_figure_check$records_without_depth == 230,
+  depth_figure_check$positive_with_depth == 173,
+  depth_figure_check$positive_without_depth == 0
+)
+
+
+
+################################################################################
+# 7. Panel B
 # Annual RAI-W contribution by bathymetric stratum
 ################################################################################
 
@@ -326,8 +373,12 @@ plot_raiw_by_year <- ggplot(
     legend.position = "right"
   )
 
+
+
+
+
 ################################################################################
-# 7. Combine panels
+# 8. Combine panels
 ################################################################################
 
 figure_4 <- (
@@ -372,7 +423,7 @@ ggsave(
 
 
 ################################################################################
-# 8. Export figure source values
+# 9. Export figure source values
 ################################################################################
 
 write_csv(
@@ -391,7 +442,7 @@ write_csv(
 )
 
 ################################################################################
-# 9. Checks
+# 10. Checks
 ################################################################################
 
 figure_4_positive_check <- annual_positive_dafor |>
@@ -427,5 +478,5 @@ if (any(figure_4_positive_check$difference != 0, na.rm = TRUE)) {
   warning("Figure 4 positive-record totals do not match annual annotations.")
 }
 
-#source("R/06_figures_dpue_raiw.R")
+#source("R/05_figures_dpue_raiw.R")
 

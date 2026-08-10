@@ -2,9 +2,12 @@
 # 03_metric_relationship_and_effort.R
 #
 # Evaluate:
-# - DPUE × RAI-W relationship
-# - influence of monitoring effort
-# - temporal trends accounting for effort
+# - relationship between DPUE and RAI-W
+# - association between monitoring effort and invasion metrics
+# - descriptive annual summaries
+#
+# Temporal inference is performed separately in
+# 08_effort_standardised_analyses.R.
 ################################################################################
 
 source("R/00_setup.R")
@@ -14,48 +17,108 @@ site_year_metrics <- readRDS(
 )
 
 ################################################################################
-# 1. DPUE × RAI-W relationship
+# 1. CHECK REQUIRED VARIABLES
+################################################################################
+
+required_columns <- c(
+  "localidade",
+  "year",
+  "effort_minutes",
+  "n_positive",
+  "dpue",
+  "rai_w"
+)
+
+missing_columns <- setdiff(
+  required_columns,
+  names(site_year_metrics)
+)
+
+if (length(missing_columns) > 0) {
+  stop(
+    paste(
+      "Missing columns in site_year_metrics:",
+      paste(missing_columns, collapse = ", ")
+    )
+  )
+}
+
+################################################################################
+# 2. DPUE × RAI-W RELATIONSHIP
 ################################################################################
 
 dpue_raiw_cor <- cor.test(
   site_year_metrics$dpue,
   site_year_metrics$rai_w,
-  method = "spearman"
+  method = "spearman",
+  exact = FALSE
 )
 
 dpue_raiw_summary <- tibble(
   analysis = "DPUE_vs_RAIW",
+  n_locality_years = sum(
+    complete.cases(
+      site_year_metrics$dpue,
+      site_year_metrics$rai_w
+    )
+  ),
   rho = unname(dpue_raiw_cor$estimate),
   p_value = dpue_raiw_cor$p.value
 )
 
 ################################################################################
-# 2. Effort evaluation
+# 3. MONITORING EFFORT EVALUATION
+#
+# These correlations are diagnostic analyses evaluating whether locality-year
+# metric values remain associated with the amount of monitoring effort.
 ################################################################################
 
 effort_dpue <- cor.test(
   site_year_metrics$effort_minutes,
   site_year_metrics$dpue,
-  method = "spearman"
+  method = "spearman",
+  exact = FALSE
 )
 
 effort_raiw <- cor.test(
   site_year_metrics$effort_minutes,
   site_year_metrics$rai_w,
-  method = "spearman"
+  method = "spearman",
+  exact = FALSE
 )
 
 effort_positive <- cor.test(
   site_year_metrics$effort_minutes,
   site_year_metrics$n_positive,
-  method = "spearman"
+  method = "spearman",
+  exact = FALSE
 )
 
 effort_correlations <- tibble(
   response = c(
     "DPUE",
-    "RAI_W",
-    "Positive_detections"
+    "RAI-W",
+    "Positive detections"
+  ),
+  n_locality_years = c(
+    sum(
+      complete.cases(
+        site_year_metrics$effort_minutes,
+        site_year_metrics$dpue
+      )
+    ),
+    sum(
+      complete.cases(
+        site_year_metrics$effort_minutes,
+        site_year_metrics$rai_w
+      )
+    ),
+    sum(
+      complete.cases(
+        site_year_metrics$effort_minutes,
+        site_year_metrics$n_positive
+      )
+    )
   ),
   rho = c(
     unname(effort_dpue$estimate),
@@ -70,90 +133,87 @@ effort_correlations <- tibble(
 )
 
 ################################################################################
-# 3. Annual summaries
+# 4. DESCRIPTIVE ANNUAL SUMMARIES
+#
+# Civil-year summaries are descriptive only because the set of monitored
+# localities varied among years.
 ################################################################################
 
 annual_summary <- site_year_metrics |>
   group_by(year) |>
   summarise(
-    n_sites = n(),
-    effort_minutes = sum(effort_minutes),
-    positive_detections = sum(n_positive),
+    n_localities = n(),
+    effort_minutes = sum(effort_minutes, na.rm = TRUE),
+    effort_hours = effort_minutes / 60,
+    positive_detections = sum(n_positive, na.rm = TRUE),
     positive_per_hour =
-      sum(n_positive) /
-      (sum(effort_minutes) / 60),
+      positive_detections / effort_hours,
     mean_dpue = mean(dpue, na.rm = TRUE),
+    median_dpue = median(dpue, na.rm = TRUE),
     mean_raiw = mean(rai_w, na.rm = TRUE),
+    median_raiw = median(rai_w, na.rm = TRUE),
     .groups = "drop"
   )
 
 ################################################################################
-# 4. Temporal models
+# 5. PRINT RESULTS
 ################################################################################
 
-m1 <- lm(
-  log1p(dpue) ~ year,
-  data = site_year_metrics
-)
+cat("\nDPUE × RAI-W relationship\n")
+print(dpue_raiw_summary)
 
-m2 <- lm(
-  log1p(dpue) ~ year + effort_minutes,
-  data = site_year_metrics
-)
+cat("\nMonitoring effort correlations\n")
+print(effort_correlations)
 
-m3 <- lm(
-  log1p(rai_w) ~ year,
-  data = site_year_metrics
-)
-
-m4 <- lm(
-  log1p(rai_w) ~ year + effort_minutes,
-  data = site_year_metrics
-)
+cat("\nDescriptive annual summaries\n")
+print(annual_summary, n = Inf)
 
 ################################################################################
-# 5. Extract model coefficients
+# 6. EXPORT OUTPUTS
 ################################################################################
-
-extract_model <- function(model_object, model_name) {
-  
-  model_summary <- summary(model_object)
-  
-  broom::tidy(model_object) |>
-    mutate(
-      model = model_name,
-      r_squared = model_summary$r.squared,
-      adj_r_squared = model_summary$adj.r.squared
-    ) |>
-    select(
-      model,
-      term,
-      estimate,
-      std.error,
-      statistic,
-      p.value,
-      r_squared,
-      adj_r_squared
-    )
-}
-
-
-temporal_models <- bind_rows(
-  extract_model(m1, "DPUE_year"),
-  extract_model(m2, "DPUE_year_effort"),
-  extract_model(m3, "RAIW_year"),
-  extract_model(m4, "RAIW_year_effort")
-)
-
-print(temporal_models)
 
 write_csv(
-  temporal_models,
-  "outputs/temporal_models.csv"
+  dpue_raiw_summary,
+  "outputs/dpue_raiw_relationship.csv"
+)
+
+write_csv(
+  effort_correlations,
+  "outputs/effort_correlations.csv"
+)
+
+write_csv(
+  annual_summary,
+  "outputs/annual_summary.csv"
 )
 
 saveRDS(
-  temporal_models,
+  dpue_raiw_summary,
+  "outputs/dpue_raiw_relationship.rds"
+)
+
+saveRDS(
+  effort_correlations,
+  "outputs/effort_correlations.rds"
+)
+
+saveRDS(
+  annual_summary,
+  "outputs/annual_summary.rds"
+)
+
+################################################################################
+# 7. REMOVE OBSOLETE TEMPORAL MODEL OUTPUTS
+#
+# Temporal linear models based on all locality-year combinations were
+# superseded by the effort-standardised analyses implemented in script 08.
+################################################################################
+
+obsolete_files <- c(
+  "outputs/temporal_models.csv",
   "outputs/temporal_models.rds"
 )
 
+file.remove(
+  obsolete_files[file.exists(obsolete_files)]
+)

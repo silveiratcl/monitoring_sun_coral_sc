@@ -1,8 +1,8 @@
 ################################################################################
-# 09_prepare_reviewer8_analysis.R
+# 07_sampling_balance_and_cycles.R
 #
-# Purpose:
-# Prepare and diagnose the datasets used in the complementary analyses
+# Prepare sampling-balance diagnostics and comparable monitoring subsets
+# for temporal, spatial, and bathymetric analyses.
 #
 # This script:
 # 1. Defines the complete monitoring dataset (2022-2025)
@@ -10,9 +10,8 @@
 # 3. Defines three annual monitoring cycles
 # 4. Summarises sampling effort by locality and cycle
 # 5. Identifies localities sampled in all three monitoring cycles
-# 6. Quantifies how evenly those localities were sampled among cycles
-
-
+# 6. Quantifies sampling balance among cycles
+# 7. Prepares datasets for effort-standardised analyses
 ################################################################################
 
 source("R/00_setup.R")
@@ -649,57 +648,56 @@ saveRDS(
 
 write_csv(
   dataset_summary,
-  "outputs/reviewer8_dataset_summary.csv"
+  "outputs/sampling_dataset_summary.csv"
 )
 
 write_csv(
   no_depth_summary,
-  "outputs/reviewer8_records_without_depth.csv"
+  "outputs/records_without_depth.csv"
 )
 
 write_csv(
   cycle_summary,
-  "outputs/reviewer8_cycle_summary.csv"
+  "outputs/monitoring_cycle_summary.csv"
 )
 
 write_csv(
   locality_cycle_effort,
-  "outputs/reviewer8_locality_cycle_effort.csv"
+  "outputs/locality_cycle_effort.csv"
 )
 
 write_csv(
   locality_cycle_balance,
-  "outputs/reviewer8_locality_cycle_balance.csv"
+  "outputs/locality_cycle_balance.csv"
 )
 
 write_csv(
   balanced_cycle_candidates,
-  "outputs/reviewer8_balanced_cycle_candidates.csv"
+  "outputs/balanced_cycle_candidates.csv"
 )
 
 write_csv(
   balanced_effort_matrix,
-  "outputs/reviewer8_balanced_effort_matrix.csv"
+  "outputs/balanced_effort_matrix.csv"
 )
 
 write_csv(
   balanced_cycle_check,
-  "outputs/reviewer8_balanced_cycle_check.csv"
+  "outputs/balanced_cycle_check.csv"
 )
 
 write_csv(
   coverage_summary,
-  "outputs/reviewer8_cycle_coverage_summary.csv"
+  "outputs/cycle_coverage_summary.csv"
 )
-
 ################################################################################
 # 21. FINAL SUMMARY
 ################################################################################
 
-cat(
-  "\n============================================================\n",
-  "REVIEWER #8 - DATA PREPARATION SUMMARY\n",
-  "============================================================\n",
+  cat(
+    "\n============================================================\n",
+    "SAMPLING BALANCE AND MONITORING CYCLE SUMMARY\n",
+    "============================================================\n",
   
   "Raw records: ",
   nrow(df_raw),
@@ -754,3 +752,4 @@ cat(
   sep = ""
 )
 
+#source("R/07_sampling_balance_and_cycles.R")

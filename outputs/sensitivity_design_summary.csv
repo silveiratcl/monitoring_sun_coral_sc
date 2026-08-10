@@ -1,0 +1,4 @@
+analysis,dataset,sampling_units,standardised_effort,iterations,purpose
+Temporal,Seven localities represented in all three monitoring cycles,7 localities × 3 cycles,30 min per locality × cycle,1000,Evaluate temporal patterns while maintaining locality identity and equal sampling effort
+Spatial,All 16 localities monitored in 2025,16 localities,34 min per locality,1000,Evaluate whether the spatial distribution persists within a single year after equalising sampling effort
+Bathymetric,Five 2025 localities represented in all three main depth strata,5 localities × 3 depth strata,30 min per locality × depth stratum,1000,Evaluate bathymetric patterns while maintaining locality identity and equal sampling effort

@@ -1,21 +1,15 @@
 ################################################################################
-# 10_reviewer8_temporal_rarefaction.R
+# 08_effort_standardised_analyses.R
 #
-# Reviewer #8 - Temporal analysis with standardized sampling effort
+# Effort-standardised temporal, spatial, and bathymetric analyses
 #
-# Objectives:
-# 1. Restrict the temporal analysis to localities monitored in all three
-#    monitoring cycles.
-# 2. Standardize sampling effort among locality-cycle combinations using
-#    repeated random rarefaction.
-# 3. Recalculate DPUE and RAI-W after rarefaction.
-# 4. Test temporal differences among the three monitoring cycles using
-#    locality as a repeated-measures block (Friedman test).
-#
-# Monitoring cycles:
-# - 2022/2023
-# - 2023/2024
-# - 2024/2025
+# This script:
+# 1. Evaluates temporal patterns using comparable monitoring cycles
+# 2. Evaluates spatial patterns using 2025 data
+# 3. Evaluates bathymetric patterns using balanced locality-depth subsets
+# 4. Uses repeated random subsampling to assess sensitivity to unequal effort
+# 5. Performs locality-level exact permutation tests
+# 6. Performs complementary locality-level occurrence analysis
 ################################################################################
 
 source("R/00_setup.R")
@@ -43,17 +37,13 @@ expected_cycles <- c(
 )
 
 ################################################################################
-# 2. LOAD DATA PREPARED IN SCRIPT 09
+# 2. LOAD DATA PREPARED IN SCRIPT 07
 ################################################################################
 
 balanced_cycle_minutes <- readRDS(
   "outputs/balanced_cycle_minutes.rds"
 )
 
-balanced_cycle_candidates <- read_csv(
-  "outputs/reviewer8_balanced_cycle_candidates.csv",
-  show_col_types = FALSE
-)
 
 # Additional datasets required by the spatial and bathymetric analyses
 df_localidade <- readRDS(
@@ -484,120 +474,9 @@ print(
   standardised_cycle_summary,
   n = Inf
 )
-################################################################################
-# DETERMINISTIC EFFORT-STANDARDISED TEMPORAL METRICS
-#
-# Rarefaction remains the sensitivity analysis used to describe the
-# variability introduced by equal-effort subsampling.
-#
-# For inferential testing, we use the expected value under equal-effort
-# subsampling. This avoids making the test statistic dependent on the
-# random seed used for rarefaction.
-################################################################################
-
-temporal_test_metrics <- df_temporal |>
-  group_by(
-    localidade,
-    region,
-    monitoring_cycle
-  ) |>
-  summarise(
-    effort_minutes = n(),
-    
-    n_positive =
-      sum(
-        dafor_num > 0,
-        na.rm = TRUE
-      ),
-    
-    detection_frequency =
-      n_positive /
-      effort_minutes,
-    
-    mean_dafor_weight =
-      mean(
-        raiw_weight,
-        na.rm = TRUE
-      ),
-    
-    Uni100m =
-      first(Uni100m),
-    
-    .groups = "drop"
-  ) |>
-  mutate(
-    # Expected DPUE under a common sampling duration
-    dpue =
-      detection_frequency *
-      60 /
-      Uni100m,
-    
-    # Expected RAI-W under a common sampling duration
-    rai_w =
-      mean_dafor_weight *
-      60 /
-      Uni100m
-  )
-################################################################################
-# 15. FRIEDMAN TEST - DPUE
-#
-# Locality is the repeated-measures block.
-################################################################################
-
-friedman_dpue <- friedman.test(
-  dpue ~ monitoring_cycle | localidade,
-  data = standardised_temporal_metrics
-)
 
 ################################################################################
-# 16. FRIEDMAN TEST - RAI-W
-################################################################################
-
-friedman_raiw <- friedman.test(
-  rai_w ~ monitoring_cycle | localidade,
-  data = standardised_temporal_metrics
-)
-
-################################################################################
-# 17. FRIEDMAN RESULTS
-################################################################################
-
-friedman_results <- tibble(
-  response = c(
-    "DPUE",
-    "RAI-W"
-  ),
-  
-  statistic = c(
-    unname(
-      friedman_dpue$statistic
-    ),
-    
-    unname(
-      friedman_raiw$statistic
-    )
-  ),
-  
-  degrees_freedom = c(
-    unname(
-      friedman_dpue$parameter
-    ),
-    
-    unname(
-      friedman_raiw$parameter
-    )
-  ),
-  
-  p_value = c(
-    friedman_dpue$p.value,
-    friedman_raiw$p.value
-  )
-)
-
-print(friedman_results)
-
-################################################################################
-# 18. CYCLE-LEVEL DISTRIBUTION ACROSS ALL RAREFACTION ITERATIONS
+# 15. CYCLE-LEVEL DISTRIBUTION ACROSS ALL RAREFACTION ITERATIONS
 #
 # For every iteration, calculate the average among the seven localities.
 ################################################################################
@@ -630,7 +509,7 @@ iteration_cycle_summary <- rarefaction_results |>
   )
 
 ################################################################################
-# 19. RAREFACTION UNCERTAINTY BY CYCLE
+# 16. RAREFACTION UNCERTAINTY BY CYCLE
 ################################################################################
 
 rarefaction_cycle_distribution <- iteration_cycle_summary |>
@@ -697,160 +576,64 @@ print(
   n = Inf
 )
 
-################################################################################
-# 20. DESCRIBE TEMPORAL DIRECTION ACROSS RAREFACTION ITERATIONS
-#
-# This is descriptive only.
-# It is NOT used as an additional significance test.
-################################################################################
-
-cycle_wide <- iteration_cycle_summary |>
-  select(
-    iteration,
-    monitoring_cycle,
-    mean_dpue,
-    mean_raiw
-  ) |>
-  pivot_wider(
-    names_from = monitoring_cycle,
-    values_from = c(
-      mean_dpue,
-      mean_raiw
-    )
-  )
-
-temporal_direction_summary <- tibble(
-  metric = c(
-    "DPUE",
-    "RAI-W"
-  ),
-  
-  proportion_last_greater_first = c(
-    
-    mean(
-      cycle_wide$`mean_dpue_2024/2025` >
-        cycle_wide$`mean_dpue_2022/2023`
-    ),
-    
-    mean(
-      cycle_wide$`mean_raiw_2024/2025` >
-        cycle_wide$`mean_raiw_2022/2023`
-    )
-  )
-)
-
-print(
-  temporal_direction_summary
-)
 
 ################################################################################
-# 21. SAVE OUTPUTS
+# 17. SAVE TEMPORAL OUTPUTS
 ################################################################################
 
 write_csv(
   sampling_effort,
-  "outputs/reviewer8_temporal_sampling_effort.csv"
+  "outputs/temporal_sampling_effort.csv"
 )
 
 write_csv(
   standardised_temporal_metrics,
-  "outputs/reviewer8_temporal_rarefied_metrics.csv"
+  "outputs/temporal_rarefied_metrics.csv"
 )
 
 write_csv(
   standardised_cycle_summary,
-  "outputs/reviewer8_temporal_cycle_summary.csv"
-)
-
-write_csv(
-  friedman_results,
-  "outputs/reviewer8_temporal_friedman.csv"
+  "outputs/temporal_cycle_summary.csv"
 )
 
 write_csv(
   rarefaction_cycle_distribution,
-  "outputs/reviewer8_temporal_rarefaction_distribution.csv"
-)
-
-write_csv(
-  temporal_direction_summary,
-  "outputs/reviewer8_temporal_direction_summary.csv"
+  "outputs/temporal_rarefaction_distribution.csv"
 )
 
 saveRDS(
   rarefaction_results,
-  "outputs/reviewer8_temporal_rarefaction_iterations.rds"
+  "outputs/temporal_rarefaction_iterations.rds"
 )
 
 saveRDS(
   standardised_temporal_metrics,
-  "outputs/reviewer8_temporal_rarefied_metrics.rds"
+  "outputs/temporal_rarefied_metrics.rds"
 )
 
 ################################################################################
-# 22. FINAL SUMMARY
+# 18. TEMPORAL EFFORT-STANDARDISATION SUMMARY
 ################################################################################
 
 cat(
   "\n============================================================\n",
-  "REVIEWER #8 - TEMPORAL RAREFACTION ANALYSIS\n",
+  "TEMPORAL EFFORT-STANDARDISATION SUMMARY\n",
   "============================================================\n",
-  
-  "Localities retained: ",
-  n_distinct(
-    df_temporal$localidade
-  ),
-  "\n",
-  
-  "Monitoring cycles: ",
-  n_distinct(
-    df_temporal$monitoring_cycle
-  ),
-  "\n",
-  
-  "Original minute-level records: ",
-  nrow(
-    df_temporal
-  ),
-  "\n",
-  
-  "Rarefied effort per locality-cycle: ",
-  rarefied_n,
-  " minutes\n",
-  
+  "Localities retained: ", n_distinct(df_temporal$localidade), "\n",
+  "Monitoring cycles: ", n_distinct(df_temporal$monitoring_cycle), "\n",
+  "Original minute-level records: ", nrow(df_temporal), "\n",
+  "Rarefied effort per locality-cycle: ", rarefied_n, " minutes\n",
   "Minutes per rarefaction iteration: ",
-  rarefied_n *
-    n_distinct(df_temporal$localidade) *
-    length(expected_cycles),
+  rarefied_n * n_distinct(df_temporal$localidade) * length(expected_cycles),
   "\n",
-  
-  "Number of rarefaction iterations: ",
-  n_iterations,
-  "\n",
-  
-  "DPUE Friedman p-value: ",
-  signif(
-    friedman_dpue$p.value,
-    4
-  ),
-  "\n",
-  
-  "RAI-W Friedman p-value: ",
-  signif(
-    friedman_raiw$p.value,
-    4
-  ),
-  "\n",
-  
+  "Number of rarefaction iterations: ", n_iterations, "\n",
   "============================================================\n",
-  
   sep = ""
 )
 
 
-
 ################################################################################
-# 23. REVIEWER #8 - 2025 SPATIAL SAMPLING DIAGNOSTIC
+# 19. 2025 SPATIAL SAMPLING DIAGNOSTIC
 #
 # Purpose:
 # Inspect spatial sampling effort in 2025 before defining the rarefaction
@@ -966,17 +749,17 @@ cat(
 )
 
 ################################################################################
-# 24. SAVE 2025 SPATIAL DIAGNOSTIC
+# 20. SAVE 2025 SPATIAL DIAGNOSTIC
 ################################################################################
 
 write_csv(
   spatial_2025_sampling,
-  "outputs/reviewer8_spatial_2025_sampling.csv"
+  "outputs/spatial_2025_sampling.csv"
 )
 
 write_csv(
   region_2025_sampling,
-  "outputs/reviewer8_region_2025_sampling.csv"
+  "outputs/region_2025_sampling.csv"
 )
 
 
@@ -984,7 +767,7 @@ print(spatial_2025_sampling, n = Inf)
 print(region_2025_sampling, n = Inf)
 
 ################################################################################
-# 25. REVIEWER #8 - 2025 SPATIAL RAREFACTION
+# 21. 2025 SPATIAL RAREFACTION
 #
 # Purpose:
 # Evaluate whether the spatial concentration of T. coccinea detections
@@ -1005,7 +788,7 @@ set.seed(1234)
 n_spatial_iterations <- 1000
 
 ################################################################################
-# 26. PREPARE 2025 DATA FOR RAREFACTION
+# 22. PREPARE 2025 DATA FOR RAREFACTION
 ################################################################################
 
 df_2025_rarefaction <- df_2025 |>
@@ -1023,7 +806,7 @@ df_2025_rarefaction <- df_2025 |>
   )
 
 ################################################################################
-# 27. DEFINE COMMON SAMPLING EFFORT
+# 23. DEFINE COMMON SAMPLING EFFORT
 ################################################################################
 
 spatial_rarefied_n <- df_2025_rarefaction |>
@@ -1050,7 +833,7 @@ stopifnot(
 )
 
 ################################################################################
-# 28. FUNCTION FOR ONE SPATIAL RAREFACTION
+# 24. FUNCTION FOR ONE SPATIAL RAREFACTION
 ################################################################################
 
 run_spatial_rarefaction <- function(iteration_number) {
@@ -1096,7 +879,7 @@ run_spatial_rarefaction <- function(iteration_number) {
 }
 
 ################################################################################
-# 29. RUN SPATIAL RAREFACTION
+# 25. RUN SPATIAL RAREFACTION
 ################################################################################
 
 cat(
@@ -1113,7 +896,7 @@ spatial_rarefaction_results <- map_dfr(
 )
 
 ################################################################################
-# 30. CHECK OUTPUT
+# 26. CHECK SPATIAL RAREFACTION OUTPUT
 ################################################################################
 
 spatial_rarefaction_check <-
@@ -1131,7 +914,7 @@ stopifnot(
 )
 
 ################################################################################
-# 31. STANDARDIZED ESTIMATE FOR EACH LOCALITY
+# 27. STANDARDISED ESTIMATE FOR EACH LOCALITY
 #
 # Median across the 1,000 rarefaction iterations.
 ################################################################################
@@ -1212,7 +995,7 @@ print(
 )
 
 ################################################################################
-# 32. STANDARDIZED REGION SUMMARY
+# 28. STANDARDISED REGION SUMMARY
 #
 # Each locality contributes equally to its region.
 ################################################################################
@@ -1304,62 +1087,9 @@ print(
   n = Inf
 )
 
-################################################################################
-# 33. LOCALITY-LEVEL TEST OF SPATIAL DIFFERENCES
-#
-# Kruskal-Wallis is applied to the standardized locality-level estimates.
-# This avoids treating individual one-minute observations as independent
-# spatial replicates.
-################################################################################
-
-kw_spatial_detection <- kruskal.test(
-  detection_frequency ~ region,
-  data = spatial_rarefied_localities
-)
-
-kw_spatial_raiw <- kruskal.test(
-  mean_raiw_weight ~ region,
-  data = spatial_rarefied_localities
-)
-
-spatial_kw_results <- tibble(
-  response = c(
-    "Detection frequency",
-    "Mean RAI-W weight"
-  ),
-  
-  statistic = c(
-    unname(
-      kw_spatial_detection$statistic
-    ),
-    
-    unname(
-      kw_spatial_raiw$statistic
-    )
-  ),
-  
-  degrees_freedom = c(
-    unname(
-      kw_spatial_detection$parameter
-    ),
-    
-    unname(
-      kw_spatial_raiw$parameter
-    )
-  ),
-  
-  p_value = c(
-    kw_spatial_detection$p.value,
-    kw_spatial_raiw$p.value
-  )
-)
-
-print(
-  spatial_kw_results
-)
 
 ################################################################################
-# 34. PRESENCE/ABSENCE TEST USING 2025 LOCALITIES
+# 29. PRESENCE/ABSENCE TEST USING 2025 LOCALITIES
 #
 # This analysis uses locality, rather than one-minute observations,
 # as the replicate.
@@ -1413,98 +1143,51 @@ print(
 )
 
 ################################################################################
-# 35. SAVE SPATIAL RESULTS
+# 30. SAVE SPATIAL RESULTS
 ################################################################################
 
 write_csv(
   spatial_rarefied_localities,
-  "outputs/reviewer8_spatial_2025_rarefied_localities.csv"
+  "outputs/spatial_2025_rarefied_localities.csv"
 )
 
 write_csv(
   spatial_rarefied_region_summary,
-  "outputs/reviewer8_spatial_2025_rarefied_regions.csv"
-)
-
-write_csv(
-  spatial_kw_results,
-  "outputs/reviewer8_spatial_2025_kruskal.csv"
+  "outputs/spatial_2025_rarefied_regions.csv"
 )
 
 write_csv(
   spatial_presence_table,
-  "outputs/reviewer8_spatial_2025_presence_table.csv"
+  "outputs/spatial_2025_presence_table.csv"
 )
 
 write_csv(
   spatial_fisher_result,
-  "outputs/reviewer8_spatial_2025_fisher.csv"
+  "outputs/spatial_2025_fisher.csv"
 )
 
 saveRDS(
   spatial_rarefaction_results,
-  "outputs/reviewer8_spatial_2025_rarefaction_iterations.rds"
+  "outputs/spatial_2025_rarefaction_iterations.rds"
 )
 
 ################################################################################
-# 36. SPATIAL ANALYSIS SUMMARY
+# 31. SPATIAL EFFORT-STANDARDISATION SUMMARY
 ################################################################################
 
 cat(
   "\n============================================================\n",
-  "REVIEWER #8 - 2025 SPATIAL ANALYSIS\n",
+  "2025 SPATIAL EFFORT-STANDARDISATION SUMMARY\n",
   "============================================================\n",
-  
-  "2025 localities: ",
-  n_distinct(
-    df_2025_rarefaction$localidade
-  ),
-  "\n",
-  
-  "2025 monitoring minutes: ",
-  nrow(
-    df_2025_rarefaction
-  ),
-  "\n",
-  
+  "2025 localities: ", n_distinct(df_2025_rarefaction$localidade), "\n",
+  "2025 monitoring minutes: ", nrow(df_2025_rarefaction), "\n",
   "2025 positive records: ",
-  sum(
-    df_2025_rarefaction$dafor_num > 0,
-    na.rm = TRUE
-  ),
-  "\n",
-  
-  "Rarefied effort per locality: ",
-  spatial_rarefied_n,
-  " minutes\n",
-  
-  "Rarefaction iterations: ",
-  n_spatial_iterations,
-  "\n",
-  
-  "Kruskal-Wallis detection frequency p-value: ",
-  signif(
-    kw_spatial_detection$p.value,
-    4
-  ),
-  "\n",
-  
-  "Kruskal-Wallis RAI-W weight p-value: ",
-  signif(
-    kw_spatial_raiw$p.value,
-    4
-  ),
-  "\n",
-  
+  sum(df_2025_rarefaction$dafor_num > 0, na.rm = TRUE), "\n",
+  "Rarefied effort per locality: ", spatial_rarefied_n, " minutes\n",
+  "Rarefaction iterations: ", n_spatial_iterations, "\n",
   "Fisher locality-presence p-value: ",
-  signif(
-    fisher_spatial_presence$p.value,
-    4
-  ),
-  "\n",
-  
+  signif(fisher_spatial_presence$p.value, 4), "\n",
   "============================================================\n",
-  
   sep = ""
 )
 
@@ -1514,15 +1197,10 @@ print(
 )
 
 print(
-  spatial_kw_results
-)
-
-print(
   spatial_fisher_result
 )
-
 ################################################################################
-# 37. REVIEWER #8 - 2025 BATHYMETRIC SAMPLING DIAGNOSTIC
+# 32. 2025 BATHYMETRIC SAMPLING DIAGNOSTIC
 #
 # Purpose:
 # Reassess the bathymetric pattern using 2025 data only, following exactly
@@ -1543,7 +1221,7 @@ depth_levels <- c(
 )
 
 ################################################################################
-# 38. PREPARE 2025 DEPTH DATA
+# 33. PREPARE 2025 DEPTH DATA
 #
 # Use the depth-complete analytical dataset and reproduce the classification
 # used in Figure 4.
@@ -1591,7 +1269,7 @@ df_2025_depth <- df_monitoring_depth |>
   )
 
 ################################################################################
-# 39. CHECK DEPTH CLASSIFICATION
+# 34. CHECK DEPTH CLASSIFICATION
 ################################################################################
 
 depth_classification_check <- df_2025_depth |>
@@ -1622,7 +1300,7 @@ print(
 )
 
 ################################################################################
-# 40. SAMPLING EFFORT AND DETECTIONS BY DEPTH CLASS
+# 35. SAMPLING EFFORT AND DETECTIONS BY DEPTH CLASS
 ################################################################################
 
 depth_2025_sampling <- df_2025_depth |>
@@ -1695,7 +1373,7 @@ print(
 )
 
 ################################################################################
-# 41. LOCALITY × DEPTH CLASS SUMMARY
+# 36. LOCALITY × DEPTH CLASS SUMMARY
 #
 # This table is important because it shows how many localities contribute
 # to each bathymetric class and whether detections within a depth class
@@ -1740,7 +1418,7 @@ print(
 )
 
 ################################################################################
-# 42. DISTRIBUTION OF POSITIVE RECORDS AMONG DEPTH CLASSES
+# 37. DISTRIBUTION OF POSITIVE RECORDS AMONG DEPTH CLASSES
 ################################################################################
 
 depth_positive_distribution <- depth_2025_sampling |>
@@ -1768,7 +1446,7 @@ print(
 )
 
 ################################################################################
-# 43. CHECK AGAINST FIGURE 4 LOGIC
+# 38. CHECK AGAINST FIGURE 4 LOGIC
 #
 # The number of positive records in 2025 should correspond to the same
 # bathymetric classification used to generate Figure 4.
@@ -1788,7 +1466,7 @@ print(
 )
 
 ################################################################################
-# 44. BATHYMETRIC SAMPLING SUMMARY
+# 39. BATHYMETRIC SAMPLING SUMMARY
 ################################################################################
 
 cat(
@@ -1833,27 +1511,27 @@ cat(
 )
 
 ################################################################################
-# 45. SAVE BATHYMETRIC DIAGNOSTIC
+# 40. SAVE BATHYMETRIC DIAGNOSTIC
 ################################################################################
 
 write_csv(
   depth_classification_check,
-  "outputs/reviewer8_depth_2025_classification_check.csv"
+  "outputs/depth_2025_classification_check.csv"
 )
 
 write_csv(
   depth_2025_sampling,
-  "outputs/reviewer8_depth_2025_sampling.csv"
+  "outputs/depth_2025_sampling.csv"
 )
 
 write_csv(
   locality_depth_2025,
-  "outputs/reviewer8_locality_depth_2025.csv"
+  "outputs/locality_depth_2025.csv"
 )
 
 write_csv(
   depth_positive_distribution,
-  "outputs/reviewer8_depth_2025_positive_distribution.csv"
+  "outputs/depth_2025_positive_distribution.csv"
 )
 
 
@@ -1878,7 +1556,7 @@ print(
 )
 
 ################################################################################
-# 46. REVIEWER #8 - BALANCED 2025 BATHYMETRIC ANALYSIS
+# 41. BALANCED 2025 BATHYMETRIC ANALYSIS
 #
 # Purpose:
 # Evaluate whether the bathymetric pattern observed in 2025 persists after
@@ -1906,7 +1584,7 @@ main_depth_levels <- c(
 )
 
 ################################################################################
-# 47. IDENTIFY LOCALITIES REPRESENTED IN ALL THREE MAIN DEPTH STRATA
+# 42. IDENTIFY LOCALITIES REPRESENTED IN ALL THREE MAIN DEPTH STRATA
 ################################################################################
 
 depth_locality_coverage <- df_2025_depth |>
@@ -1944,7 +1622,7 @@ print(
 )
 
 ################################################################################
-# 48. PREPARE BALANCED DEPTH DATASET
+# 43. PREPARE BALANCED DEPTH DATASET
 ################################################################################
 
 balanced_depth_names <-
@@ -1976,7 +1654,7 @@ df_depth_balanced <- df_2025_depth |>
   )
 
 ################################################################################
-# 49. CHECK EFFORT BY LOCALITY × DEPTH
+# 44. CHECK EFFORT BY LOCALITY × DEPTH
 ################################################################################
 
 balanced_depth_effort <- df_depth_balanced |>
@@ -1997,7 +1675,7 @@ print(
 )
 
 ################################################################################
-# 50. DEFINE COMMON RAREFACTION LEVEL
+# 45. DEFINE COMMON RAREFACTION LEVEL
 ################################################################################
 
 depth_rarefied_n <- min(
@@ -2015,7 +1693,7 @@ stopifnot(
 )
 
 ################################################################################
-# 51. VERIFY COMPLETE BALANCED DESIGN
+# 46. VERIFY COMPLETE BALANCED DESIGN
 ################################################################################
 
 balanced_depth_check <- balanced_depth_effort |>
@@ -2032,7 +1710,7 @@ stopifnot(
 )
 
 ################################################################################
-# 52. FUNCTION FOR ONE DEPTH RAREFACTION
+# 47. FUNCTION FOR ONE DEPTH RAREFACTION
 ################################################################################
 
 run_depth_rarefaction <- function(iteration_number) {
@@ -2074,7 +1752,7 @@ run_depth_rarefaction <- function(iteration_number) {
 }
 
 ################################################################################
-# 53. RUN 1,000 DEPTH RAREFACTIONS
+# 48. RUN 1,000 DEPTH RAREFACTIONS
 ################################################################################
 
 cat(
@@ -2091,7 +1769,7 @@ depth_rarefaction_results <- map_dfr(
 )
 
 ################################################################################
-# 54. CHECK RAREFACTION OUTPUT
+# 49. CHECK DEPTH RAREFACTION OUTPUT
 ################################################################################
 
 depth_rarefaction_check <- depth_rarefaction_results |>
@@ -2115,10 +1793,10 @@ stopifnot(
 )
 
 ################################################################################
-# 55. STANDARDIZED LOCALITY × DEPTH ESTIMATES
+# 50. STANDARDISED LOCALITY × DEPTH ESTIMATES
 #
-# Median values across the 1,000 rarefaction iterations are used as the
-# standardized estimates for the repeated-measures analysis.
+# Median values across the 1,000 rarefaction iterations are used as
+# descriptive effort-standardised estimates.
 ################################################################################
 
 standardised_depth_metrics <- depth_rarefaction_results |>
@@ -2196,7 +1874,7 @@ print(
 )
 
 ################################################################################
-# 56. STANDARDIZED SUMMARY BY DEPTH
+# 51. STANDARDISED SUMMARY BY DEPTH
 ################################################################################
 
 standardised_depth_summary <- standardised_depth_metrics |>
@@ -2238,72 +1916,9 @@ print(
   n = Inf
 )
 
-################################################################################
-# 57. FRIEDMAN TEST - DETECTION FREQUENCY
-#
-# Locality is treated as the repeated-measures block.
-################################################################################
-
-friedman_depth_detection <- friedman.test(
-  detection_frequency ~
-    faixa_bat_depth |
-    localidade,
-  data = standardised_depth_metrics
-)
 
 ################################################################################
-# 58. FRIEDMAN TEST - MEAN RAI-W WEIGHT
-################################################################################
-
-friedman_depth_raiw <- friedman.test(
-  mean_raiw_weight ~
-    faixa_bat_depth |
-    localidade,
-  data = standardised_depth_metrics
-)
-
-################################################################################
-# 59. BATHYMETRIC TEST RESULTS
-################################################################################
-
-depth_friedman_results <- tibble(
-  response = c(
-    "Detection frequency",
-    "Mean RAI-W weight"
-  ),
-  
-  statistic = c(
-    unname(
-      friedman_depth_detection$statistic
-    ),
-    
-    unname(
-      friedman_depth_raiw$statistic
-    )
-  ),
-  
-  degrees_freedom = c(
-    unname(
-      friedman_depth_detection$parameter
-    ),
-    
-    unname(
-      friedman_depth_raiw$parameter
-    )
-  ),
-  
-  p_value = c(
-    friedman_depth_detection$p.value,
-    friedman_depth_raiw$p.value
-  )
-)
-
-print(
-  depth_friedman_results
-)
-
-################################################################################
-# 60. DEPTH DISTRIBUTION ACROSS RAREFACTION ITERATIONS
+# 52. DEPTH DISTRIBUTION ACROSS RAREFACTION ITERATIONS
 #
 # For each iteration, average the standardized response across the five
 # repeatedly sampled localities.
@@ -2378,7 +1993,7 @@ print(
 )
 
 ################################################################################
-# 61. DESCRIPTIVE SUMMARY OF THE >14 M STRATUM
+# 53. DESCRIPTIVE SUMMARY OF THE >14 M STRATUM
 #
 # The deepest stratum is not included in the inferential balanced analysis
 # because only one locality contributed observations in 2025.
@@ -2395,108 +2010,62 @@ print(
 )
 
 ################################################################################
-# 62. SAVE BATHYMETRIC RESULTS
+# 54. SAVE BATHYMETRIC RESULTS
 ################################################################################
 
 write_csv(
   balanced_depth_localities,
-  "outputs/reviewer8_depth_2025_balanced_localities.csv"
+  "outputs/depth_2025_balanced_localities.csv"
 )
 
 write_csv(
   balanced_depth_effort,
-  "outputs/reviewer8_depth_2025_balanced_effort.csv"
+  "outputs/depth_2025_balanced_effort.csv"
 )
 
 write_csv(
   standardised_depth_metrics,
-  "outputs/reviewer8_depth_2025_rarefied_metrics.csv"
+  "outputs/depth_2025_rarefied_metrics.csv"
 )
 
 write_csv(
   standardised_depth_summary,
-  "outputs/reviewer8_depth_2025_standardised_summary.csv"
-)
-
-write_csv(
-  depth_friedman_results,
-  "outputs/reviewer8_depth_2025_friedman.csv"
+  "outputs/depth_2025_standardised_summary.csv"
 )
 
 write_csv(
   depth_rarefaction_distribution,
-  "outputs/reviewer8_depth_2025_rarefaction_distribution.csv"
+  "outputs/depth_2025_rarefaction_distribution.csv"
 )
 
 saveRDS(
   depth_rarefaction_results,
-  "outputs/reviewer8_depth_2025_rarefaction_iterations.rds"
+  "outputs/depth_2025_rarefaction_iterations.rds"
 )
 
 ################################################################################
-# 63. FINAL BATHYMETRIC SUMMARY
+# 55. BATHYMETRIC EFFORT-STANDARDISATION SUMMARY
 ################################################################################
 
 cat(
   "\n============================================================\n",
-  "REVIEWER #8 - 2025 BALANCED BATHYMETRIC ANALYSIS\n",
+  "2025 BATHYMETRIC EFFORT-STANDARDISATION SUMMARY\n",
   "============================================================\n",
-  
-  "2025 total depth-classified records: ",
-  nrow(df_2025_depth),
-  "\n",
-  
+  "2025 total depth-classified records: ", nrow(df_2025_depth), "\n",
   "Localities represented in all three main depth strata: ",
-  n_distinct(
-    df_depth_balanced$localidade
-  ),
-  "\n",
-  
+  n_distinct(df_depth_balanced$localidade), "\n",
   "Depth strata in balanced analysis: ",
-  paste(
-    main_depth_levels,
-    collapse = ", "
-  ),
-  "\n",
-  
+  paste(main_depth_levels, collapse = ", "), "\n",
   "Rarefied effort per locality-depth combination: ",
-  depth_rarefied_n,
-  " minutes\n",
-  
-  "Number of rarefaction iterations: ",
-  n_depth_iterations,
-  "\n",
-  
-  "Detection-frequency Friedman p-value: ",
-  signif(
-    friedman_depth_detection$p.value,
-    4
-  ),
-  "\n",
-  
-  "RAI-W-weight Friedman p-value: ",
-  signif(
-    friedman_depth_raiw$p.value,
-    4
-  ),
-  "\n",
-  
+  depth_rarefied_n, " minutes\n",
+  "Number of rarefaction iterations: ", n_depth_iterations, "\n",
   ">14 m observations retained descriptively only: ",
-  deepest_stratum_2025$effort_minutes,
-  " minutes / ",
-  deepest_stratum_2025$n_positive,
-  " positive record(s)\n",
-  
+  deepest_stratum_2025$effort_minutes, " minutes / ",
+  deepest_stratum_2025$n_positive, " positive record(s)\n",
   "============================================================\n",
-  
   sep = ""
 )
 
-################################################################################
-
-# Final Result
-
-################################################################################
 print(
   balanced_depth_localities,
   n = Inf
@@ -2508,153 +2077,15 @@ print(
 )
 
 print(
-  depth_friedman_results
-)
-
-print(
   depth_rarefaction_distribution,
   n = Inf
 )
 
 ################################################################################
-# 64. REVIEWER #8 - CONSOLIDATED SENSITIVITY ANALYSIS TABLE
-#
-# Purpose:
-# Combine the temporal, spatial, and bathymetric sensitivity analyses into
-# a single table for manuscript reporting and reviewer response.
+# 56. TEMPORAL DESCRIPTIVE RESULTS
 ################################################################################
 
-reviewer8_test_summary <- bind_rows(
-  
-  # ---------------------------------------------------------------------------
-  # TEMPORAL ANALYSIS
-  # ---------------------------------------------------------------------------
-  
-  friedman_results |>
-    transmute(
-      analysis = "Temporal",
-      dataset = "Seven localities monitored in all three monitoring cycles",
-      standardisation =
-        "30 one-minute records per locality × cycle; 1,000 rarefactions",
-      spatial_unit = "Locality",
-      comparison =
-        "2022/2023 vs 2023/2024 vs 2024/2025",
-      response = response,
-      test = "Friedman test",
-      statistic = statistic,
-      degrees_freedom = degrees_freedom,
-      p_value = p_value
-    ),
-  
-  # ---------------------------------------------------------------------------
-  # SPATIAL ANALYSIS
-  # ---------------------------------------------------------------------------
-  
-  spatial_kw_results |>
-    transmute(
-      analysis = "Spatial",
-      dataset = "2025 monitoring data; 16 localities",
-      standardisation =
-        "34 one-minute records per locality; 1,000 rarefactions",
-      spatial_unit = "Locality",
-      comparison =
-        "REBIO vs NEAR_REBIO vs SURROUNDINGS",
-      response = response,
-      test = "Kruskal-Wallis test",
-      statistic = statistic,
-      degrees_freedom = degrees_freedom,
-      p_value = p_value
-    ),
-  
-  spatial_fisher_result |>
-    transmute(
-      analysis = "Spatial",
-      dataset = "2025 monitoring data; 16 localities",
-      standardisation =
-        "Presence/absence evaluated at locality level",
-      spatial_unit = "Locality",
-      comparison =
-        "REBIO vs NEAR_REBIO vs SURROUNDINGS",
-      response = "Occurrence",
-      test = "Fisher exact test",
-      statistic = NA_real_,
-      degrees_freedom = NA_real_,
-      p_value = p_value
-    ),
-  
-  # ---------------------------------------------------------------------------
-  # BATHYMETRIC ANALYSIS
-  # ---------------------------------------------------------------------------
-  
-  depth_friedman_results |>
-    transmute(
-      analysis = "Bathymetric",
-      dataset =
-        "2025 monitoring data; five localities represented in all three main depth strata",
-      standardisation =
-        "30 one-minute records per locality × depth stratum; 1,000 rarefactions",
-      spatial_unit = "Locality",
-      comparison =
-        "0-2 m vs 2.1-8 m vs 8.1-14 m",
-      response = response,
-      test = "Friedman test",
-      statistic = statistic,
-      degrees_freedom = degrees_freedom,
-      p_value = p_value
-    )
-) |>
-  mutate(
-    significance = case_when(
-      p_value < 0.001 ~ "p < 0.001",
-      p_value < 0.01  ~ "p < 0.01",
-      p_value < 0.05  ~ "p < 0.05",
-      TRUE            ~ "Not significant"
-    ),
-    
-    interpretation = case_when(
-      
-      analysis == "Temporal" &
-        response == "DPUE" ~
-        "Increasing descriptive pattern across cycles, but no significant temporal difference",
-      
-      analysis == "Temporal" &
-        response == "RAI-W" ~
-        "Increasing descriptive pattern across cycles, but no significant temporal difference",
-      
-      analysis == "Spatial" &
-        response == "Detection frequency" ~
-        "Detection frequency differed significantly among regions after effort standardisation",
-      
-      analysis == "Spatial" &
-        response == "Mean RAI-W weight" ~
-        "Abundance-weighted spatial differences showed the same general pattern but were not significant",
-      
-      analysis == "Spatial" &
-        response == "Occurrence" ~
-        "Occurrence differed strongly among regions; no 2025 locality in SURROUNDINGS contained detections",
-      
-      analysis == "Bathymetric" &
-        response == "Detection frequency" ~
-        "Intermediate-depth strata retained higher descriptive values, but differences were not significant",
-      
-      analysis == "Bathymetric" &
-        response == "Mean RAI-W weight" ~
-        "Intermediate-depth strata retained higher descriptive values, but differences were not significant",
-      
-      TRUE ~ NA_character_
-    )
-  )
-
-print(
-  reviewer8_test_summary,
-  n = Inf
-)
-
-################################################################################
-# 65. TEMPORAL DESCRIPTIVE RESULTS
-################################################################################
-
-reviewer8_temporal_descriptive <- rarefaction_cycle_distribution |>
+temporal_descriptive_sensitivity <- rarefaction_cycle_distribution |>
   transmute(
     analysis = "Temporal",
     category = as.character(monitoring_cycle),
@@ -2679,15 +2110,15 @@ reviewer8_temporal_descriptive <- rarefaction_cycle_distribution |>
   )
 
 print(
-  reviewer8_temporal_descriptive,
+  temporal_descriptive_sensitivity,
   n = Inf
 )
 
 ################################################################################
-# 66. SPATIAL DESCRIPTIVE RESULTS
+# 57. SPATIAL DESCRIPTIVE RESULTS
 ################################################################################
 
-reviewer8_spatial_descriptive <- spatial_rarefied_region_summary |>
+spatial_descriptive_sensitivity <- spatial_rarefied_region_summary |>
   transmute(
     analysis = "Spatial",
     category = region,
@@ -2712,15 +2143,15 @@ reviewer8_spatial_descriptive <- spatial_rarefied_region_summary |>
   )
 
 print(
-  reviewer8_spatial_descriptive,
+  spatial_descriptive_sensitivity,
   n = Inf
 )
 
 ################################################################################
-# 67. BATHYMETRIC DESCRIPTIVE RESULTS
+# 58. BATHYMETRIC DESCRIPTIVE RESULTS
 ################################################################################
 
-reviewer8_depth_descriptive <- depth_rarefaction_distribution |>
+depth_descriptive_sensitivity <- depth_rarefaction_distribution |>
   transmute(
     analysis = "Bathymetric",
     category =
@@ -2746,30 +2177,30 @@ reviewer8_depth_descriptive <- depth_rarefaction_distribution |>
   )
 
 print(
-  reviewer8_depth_descriptive,
+  depth_descriptive_sensitivity,
   n = Inf
 )
 
 ################################################################################
-# 68. COMBINE DESCRIPTIVE SENSITIVITY RESULTS
+# 59. COMBINE DESCRIPTIVE SENSITIVITY RESULTS
 ################################################################################
 
-reviewer8_descriptive_summary <- bind_rows(
-  reviewer8_temporal_descriptive,
-  reviewer8_spatial_descriptive,
-  reviewer8_depth_descriptive
+sensitivity_descriptive_summary <- bind_rows(
+  temporal_descriptive_sensitivity,
+  spatial_descriptive_sensitivity,
+  depth_descriptive_sensitivity
 )
 
 print(
-  reviewer8_descriptive_summary,
+  sensitivity_descriptive_summary,
   n = Inf
 )
 
 ################################################################################
-# 69. ANALYTICAL DESIGN SUMMARY
+# 60. ANALYTICAL DESIGN SUMMARY
 ################################################################################
 
-reviewer8_design_summary <- tribble(
+sensitivity_design_summary <- tribble(
   
   ~analysis,
   ~dataset,
@@ -2801,105 +2232,26 @@ reviewer8_design_summary <- tribble(
 )
 
 print(
-  reviewer8_design_summary,
+  sensitivity_design_summary,
   n = Inf
 )
 
 ################################################################################
-# 70. SAVE CONSOLIDATED OUTPUTS
+# 61. SAVE CONSOLIDATED OUTPUTS
 ################################################################################
 
 write_csv(
-  reviewer8_test_summary,
-  "outputs/reviewer8_sensitivity_test_summary.csv"
+  sensitivity_descriptive_summary,
+  "outputs/sensitivity_descriptive_summary.csv"
 )
 
 write_csv(
-  reviewer8_descriptive_summary,
-  "outputs/reviewer8_sensitivity_descriptive_summary.csv"
-)
-
-write_csv(
-  reviewer8_design_summary,
-  "outputs/reviewer8_sensitivity_design_summary.csv"
+  sensitivity_design_summary,
+  "outputs/sensitivity_design_summary.csv"
 )
 
 ################################################################################
-# 71. FINAL REVIEWER #8 SUMMARY
-################################################################################
-
-cat(
-  "\n============================================================\n",
-  "REVIEWER #8 - FINAL SENSITIVITY ANALYSIS SUMMARY\n",
-  "============================================================\n",
-  
-  "\nTEMPORAL\n",
-  "7 localities × 3 monitoring cycles\n",
-  "30 min per locality-cycle; 1,000 rarefactions\n",
-  "DPUE Friedman p = ",
-  signif(
-    friedman_dpue$p.value,
-    4
-  ),
-  "\n",
-  "RAI-W Friedman p = ",
-  signif(
-    friedman_raiw$p.value,
-    4
-  ),
-  "\n",
-  "Interpretation: increasing descriptive pattern, ",
-  "but no significant difference among cycles.\n",
-  
-  "\nSPATIAL - 2025\n",
-  "16 localities; 34 min per locality; 1,000 rarefactions\n",
-  "Detection-frequency Kruskal-Wallis p = ",
-  signif(
-    kw_spatial_detection$p.value,
-    4
-  ),
-  "\n",
-  "RAI-W-weight Kruskal-Wallis p = ",
-  signif(
-    kw_spatial_raiw$p.value,
-    4
-  ),
-  "\n",
-  "Locality-presence Fisher p = ",
-  signif(
-    fisher_spatial_presence$p.value,
-    4
-  ),
-  "\n",
-  "Interpretation: spatial concentration persisted after ",
-  "standardising sampling effort.\n",
-  
-  "\nBATHYMETRIC - 2025\n",
-  "5 localities × 3 main depth strata\n",
-  "30 min per locality-depth stratum; 1,000 rarefactions\n",
-  "Detection-frequency Friedman p = ",
-  signif(
-    friedman_depth_detection$p.value,
-    4
-  ),
-  "\n",
-  "RAI-W-weight Friedman p = ",
-  signif(
-    friedman_depth_raiw$p.value,
-    4
-  ),
-  "\n",
-  "Interpretation: intermediate depths retained higher ",
-  "descriptive values, but differences were not significant.\n",
-  
-  "\n============================================================\n",
-  
-  sep = ""
-)
-
-
-################################################################################
-# 70. FINAL EXACT PERMUTATION TESTS
+# 62. FINAL EXACT PERMUTATION TESTS
 #
 # Rarefaction is retained as the sensitivity analysis for unequal sampling
 # effort. Inferential tests below use locality-level rates and exact
@@ -3547,10 +2899,10 @@ fisher_final <- spatial_fisher_result |>
 
 
 ################################################################################
-# G. FINAL REVIEWER #8 INFERENTIAL TABLE
+# G. FINAL INFERENTIAL TABLE
 ################################################################################
 
-reviewer8_final_permutation_tests <- bind_rows(
+effort_standardised_permutation_tests <- bind_rows(
   temporal_permutation_results,
   spatial_permutation_results,
   fisher_final,
@@ -3584,14 +2936,14 @@ reviewer8_final_permutation_tests <- bind_rows(
 
 
 print(
-  reviewer8_final_permutation_tests,
+  effort_standardised_permutation_tests,
   n = Inf
 )
 
 
 write_csv(
-  reviewer8_final_permutation_tests,
-  "outputs/reviewer8_final_permutation_tests.csv"
+  effort_standardised_permutation_tests,
+  "outputs/effort_standardised_permutation_tests.csv"
 )
 
 

@@ -8,17 +8,10 @@ source("R/00_setup.R")
 source("R/01_prepare_monitoring_data.R")
 
 ################################################################################
-# 1. Alternative weighting schemes
+# 1. ALTERNATIVE WEIGHTING SCHEMES
 ################################################################################
 
-weights_manual <- c(
-  `10` = 1.00,
-  `8`  = 0.80,
-  `6`  = 0.60,
-  `4`  = 0.10,
-  `2`  = 0.04,
-  `0`  = 0.00
-)
+weights_manual <- manual_weights
 
 weights_moderate <- c(
   `10` = 1.00,
@@ -39,7 +32,7 @@ weights_linear <- c(
 )
 
 ################################################################################
-# 2. Locality extent
+# 2. LOCALITY EXTENT
 ################################################################################
 
 locality_extent <- df_localidade |>
@@ -50,7 +43,7 @@ locality_extent <- df_localidade |>
   )
 
 ################################################################################
-# 3. Minute-level dataset
+# 3. PREPARE MONITORING DATA
 ################################################################################
 
 df_sensitivity <- df_monit |>
@@ -58,29 +51,37 @@ df_sensitivity <- df_monit |>
     year = lubridate::year(data),
     dafor_num = clean_num(dafor),
     
-    weight_manual =
-      coalesce(
-        unname(weights_manual[as.character(dafor_num)]),
-        0
+    weight_manual = coalesce(
+      unname(
+        weights_manual[
+          as.character(dafor_num)
+        ]
       ),
+      0
+    ),
     
-    weight_moderate =
-      coalesce(
-        unname(weights_moderate[as.character(dafor_num)]),
-        0
+    weight_moderate = coalesce(
+      unname(
+        weights_moderate[
+          as.character(dafor_num)
+        ]
       ),
+      0
+    ),
     
-    weight_linear =
-      coalesce(
-        unname(weights_linear[as.character(dafor_num)]),
-        0
-      )
+    weight_linear = coalesce(
+      unname(
+        weights_linear[
+          as.character(dafor_num)
+        ]
+      ),
+      0
+    )
   ) |>
   filter(
-    obs != "estimado dos dados do ICMBio",
-    faixa_bat != "Na",
+    year %in% 2022:2025,
+    coalesce(obs, "") != "estimado dos dados do ICMBio",
     !is.na(localidade),
-    !is.na(year),
     !is.na(dafor_id)
   ) |>
   left_join(
@@ -89,25 +90,58 @@ df_sensitivity <- df_monit |>
   )
 
 ################################################################################
-# 4. Site-year RAI-W
+# 4. QUALITY CHECKS
+################################################################################
+
+stopifnot(
+  nrow(df_sensitivity) == 8415,
+  sum(df_sensitivity$dafor_num > 0, na.rm = TRUE) == 173,
+  all(!is.na(df_sensitivity$Uni100m)),
+  all(df_sensitivity$Uni100m > 0)
+)
+
+dafor_values <- sort(
+  unique(
+    df_sensitivity$dafor_num
+  )
+)
+
+stopifnot(
+  all(
+    dafor_values %in%
+      as.numeric(names(weights_manual))
+  )
+)
+
+################################################################################
+# 5. LOCALITY-YEAR RAI-W
 ################################################################################
 
 site_year_sensitivity <- df_sensitivity |>
-  group_by(localidade, year) |>
+  group_by(
+    localidade,
+    year
+  ) |>
   summarise(
     effort_minutes = n(),
     effort_hours = effort_minutes / 60,
     
-    sum_manual = sum(weight_manual, na.rm = TRUE),
-    sum_moderate = sum(weight_moderate, na.rm = TRUE),
-    sum_linear = sum(weight_linear, na.rm = TRUE),
+    sum_manual =
+      sum(weight_manual, na.rm = TRUE),
+    
+    sum_moderate =
+      sum(weight_moderate, na.rm = TRUE),
+    
+    sum_linear =
+      sum(weight_linear, na.rm = TRUE),
     
     Uni100m = first(Uni100m),
     
     .groups = "drop"
   ) |>
   mutate(
-    denominator = effort_hours * Uni100m,
+    denominator =
+      effort_hours * Uni100m,
     
     raiw_manual =
       sum_manual / denominator,
@@ -119,8 +153,13 @@ site_year_sensitivity <- df_sensitivity |>
       sum_linear / denominator
   )
 
+stopifnot(
+  nrow(site_year_sensitivity) == 68,
+  sum(site_year_sensitivity$effort_minutes) == 8415
+)
+
 ################################################################################
-# 5. Site-year correlations
+# 6. LOCALITY-YEAR CORRELATIONS
 ################################################################################
 
 sensitivity_cor_site_year <- site_year_sensitivity |>
@@ -135,18 +174,46 @@ sensitivity_cor_site_year <- site_year_sensitivity |>
   )
 
 ################################################################################
-# 6. Locality ranking stability
+# 7. OVERALL LOCALITY RAI-W
+#
+# Numerators and monitoring effort are pooled over the complete study period
+# before calculating locality-level RAI-W. This avoids summing annual rates
+# across localities represented in different numbers of years.
 ################################################################################
 
-locality_sensitivity <- site_year_sensitivity |>
+locality_sensitivity <- df_sensitivity |>
   group_by(localidade) |>
   summarise(
-    raiw_manual = sum(raiw_manual),
-    raiw_moderate = sum(raiw_moderate),
-    raiw_linear = sum(raiw_linear),
+    effort_minutes = n(),
+    effort_hours =
+      effort_minutes / 60,
+    
+    sum_manual =
+      sum(weight_manual, na.rm = TRUE),
+    
+    sum_moderate =
+      sum(weight_moderate, na.rm = TRUE),
+    
+    sum_linear =
+      sum(weight_linear, na.rm = TRUE),
+    
+    Uni100m = first(Uni100m),
+    
     .groups = "drop"
   ) |>
   mutate(
+    denominator =
+      effort_hours * Uni100m,
+    
+    raiw_manual =
+      sum_manual / denominator,
+    
+    raiw_moderate =
+      sum_moderate / denominator,
+    
+    raiw_linear =
+      sum_linear / denominator,
+    
     rank_manual =
       min_rank(desc(raiw_manual)),
     
@@ -164,7 +231,7 @@ locality_sensitivity <- site_year_sensitivity |>
   )
 
 ################################################################################
-# 7. Ranking correlations
+# 8. LOCALITY RANKING CORRELATIONS
 ################################################################################
 
 ranking_cor <- locality_sensitivity |>
@@ -179,7 +246,7 @@ ranking_cor <- locality_sensitivity |>
   )
 
 ################################################################################
-# 8. Largest rank changes
+# 9. LARGEST RANK CHANGES
 ################################################################################
 
 rank_changes <- locality_sensitivity |>
@@ -190,10 +257,13 @@ rank_changes <- locality_sensitivity |>
         abs(diff_linear)
       )
   ) |>
-  arrange(desc(max_abs_change))
+  arrange(
+    desc(max_abs_change),
+    rank_manual
+  )
 
 ################################################################################
-# 9. Summary table for manuscript
+# 10. SUMMARY TABLE
 ################################################################################
 
 sensitivity_summary <- tibble(
@@ -205,31 +275,47 @@ sensitivity_summary <- tibble(
     "Rank_Manual_vs_Linear",
     "Rank_Moderate_vs_Linear"
   ),
+  
   spearman_rho = c(
-    sensitivity_cor_site_year[1,2],
-    sensitivity_cor_site_year[1,3],
-    sensitivity_cor_site_year[2,3],
-    ranking_cor[1,2],
-    ranking_cor[1,3],
-    ranking_cor[2,3]
+    sensitivity_cor_site_year[1, 2],
+    sensitivity_cor_site_year[1, 3],
+    sensitivity_cor_site_year[2, 3],
+    ranking_cor[1, 2],
+    ranking_cor[1, 3],
+    ranking_cor[2, 3]
   )
 )
 
 ################################################################################
-# 10. Print results
+# 11. PRINT RESULTS
 ################################################################################
 
 cat("\nSite-year correlations\n")
 print(sensitivity_cor_site_year)
 
-cat("\nRanking correlations\n")
+cat("\nLocality ranking correlations\n")
 print(ranking_cor)
 
 cat("\nLargest rank changes\n")
-print(rank_changes, n = 15)
+print(
+  rank_changes |>
+    select(
+      localidade,
+      rank_manual,
+      rank_moderate,
+      rank_linear,
+      diff_moderate,
+      diff_linear,
+      max_abs_change
+    ),
+  n = 15
+)
+
+cat("\nSensitivity summary\n")
+print(sensitivity_summary, n = Inf)
 
 ################################################################################
-# 11. Export outputs
+# 12. EXPORT OUTPUTS
 ################################################################################
 
 write_csv(
@@ -261,4 +347,3 @@ saveRDS(
   ranking_cor,
   "outputs/ranking_cor.rds"
 )
-

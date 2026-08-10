@@ -1,14 +1,11 @@
 ################################################################################
-# 08_summary_table.R
+# 06_summary_table.R
 #
 # Create manuscript summary table:
 # - monitoring effort by region
 # - locality prevalence by region
 # - positive one-minute records by region
 #
-# This table helps distinguish patterns within REBIO / NEAR_REBIO from the
-# broader study area and addresses the reviewer request for total positive
-# detections.
 ################################################################################
 
 source("R/00_setup.R")
@@ -20,16 +17,29 @@ source("R/01_prepare_monitoring_data.R")
 
 df_summary <- df_monit |>
   mutate(
+    year = lubridate::year(data),
     dafor_num = clean_num(dafor),
     positive = dafor_num > 0
   ) |>
   filter(
-    obs != "estimado dos dados do ICMBio",
-    faixa_bat != "Na",
+    year %in% 2022:2025,
+    coalesce(obs, "") != "estimado dos dados do ICMBio",
     !is.na(localidade),
     !is.na(dafor_id),
     !is.na(region)
   )
+
+
+################################################################################
+# 1a. Check analytical dataset
+################################################################################
+
+stopifnot(
+  nrow(df_summary) == 8415,
+  n_distinct(df_summary$localidade) == 43,
+  sum(df_summary$positive, na.rm = TRUE) == 173
+)
+
 
 ################################################################################
 # 2. Summary by region
@@ -107,6 +117,20 @@ summary_table_region <- bind_rows(
     effort_hours = round(effort_hours, 1),
     positive_records_percent = round(positive_records_percent, 2)
   )
+
+
+################################################################################
+# 5a. Check final totals
+################################################################################
+
+total_check <- summary_table_region |>
+  filter(region == "TOTAL")
+
+stopifnot(
+  total_check$n_localities == 43,
+  total_check$effort_minutes == 8415,
+  total_check$positive_records == 173
+)
 
 ################################################################################
 # 6. Print table
@@ -248,4 +272,4 @@ gtsave(
 )
 
 
-
+# source("R/06_summary_table.R")

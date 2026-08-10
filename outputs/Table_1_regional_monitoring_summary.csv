@@ -1,0 +1,6 @@
+region,n_localities,positive_localities,prevalence_percent,effort_minutes,effort_hours,positive_records,positive_records_percent
+REBIO,15,9,60,2808,46.8,67,2.39
+NEAR_REBIO,6,6,100,2047,34.1,106,5.18
+SURROUNDINGS,22,0,0,3560,59.3,0,0
+REBIO + NEAR_REBIO,21,15,71.4,4855,80.9,173,3.56
+TOTAL,43,15,34.9,8415,140.2,173,2.06

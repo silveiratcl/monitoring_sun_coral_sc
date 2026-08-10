@@ -1,4 +1,4 @@
-response,rho,p_value
-DPUE,-0.0679,0.582
-RAI_W,-0.0295,0.811
-Positive_detections,0.0091,0.942
+response,n_locality_years,rho,p_value
+DPUE,68,-0.0372,0.763
+RAI-W,68,0.0017,0.989
+Positive detections,68,0.0446,0.718
