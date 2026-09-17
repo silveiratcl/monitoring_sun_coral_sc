@@ -1,3 +1,13 @@
+
+
+
+
+################################################################################
+
+
+
+### new version
+
 ################################################################################
 # 06_summary_table.R
 #
@@ -6,13 +16,18 @@
 # - locality prevalence by region
 # - positive one-minute records by region
 #
+# IMPORTANT:
+# Table 1 uses the GENERAL MONITORING DATASET (2022-2025), not the
+# depth-complete dataset. Therefore, records without valid bathymetry are
+# retained here, because this table summarises regional monitoring effort and
+# occurrence, not bathymetric patterns.
 ################################################################################
 
 source("R/00_setup.R")
 source("R/01_prepare_monitoring_data.R")
 
 ################################################################################
-# 1. Prepare analytical monitoring dataset
+# 1. Prepare GENERAL analytical monitoring dataset
 ################################################################################
 
 df_summary <- df_monit |>
@@ -29,7 +44,6 @@ df_summary <- df_monit |>
     !is.na(region)
   )
 
-
 ################################################################################
 # 1a. Check analytical dataset
 ################################################################################
@@ -39,7 +53,6 @@ stopifnot(
   n_distinct(df_summary$localidade) == 43,
   sum(df_summary$positive, na.rm = TRUE) == 173
 )
-
 
 ################################################################################
 # 2. Summary by region
@@ -62,18 +75,18 @@ regional_summary <- df_summary |>
   arrange(
     factor(
       region,
-      levels = c("REBIO", "NEAR_REBIO", "SURROUNDINGS")
+      levels = c("REBIO", "ADJACENT_REBIO", "SURROUNDINGS")
     )
   )
 
 ################################################################################
-# 3. Combined REBIO + NEAR_REBIO summary
+# 3. Combined REBIO + ADJACENT_REBIO summary
 ################################################################################
 
-rebio_near_summary <- regional_summary |>
-  filter(region %in% c("REBIO", "NEAR_REBIO")) |>
+rebio_adjacent_summary <- regional_summary |>
+  filter(region %in% c("REBIO", "ADJACENT_REBIO")) |>
   summarise(
-    region = "REBIO + NEAR_REBIO",
+    region = "REBIO + ADJACENT_REBIO",
     n_localities = sum(n_localities),
     positive_localities = sum(positive_localities),
     prevalence_percent =
@@ -109,7 +122,7 @@ total_summary <- regional_summary |>
 
 summary_table_region <- bind_rows(
   regional_summary,
-  rebio_near_summary,
+  rebio_adjacent_summary,
   total_summary
 ) |>
   mutate(
@@ -118,18 +131,33 @@ summary_table_region <- bind_rows(
     positive_records_percent = round(positive_records_percent, 2)
   )
 
-
 ################################################################################
-# 5a. Check final totals
+# 5a. Check final totals and key regional values
 ################################################################################
 
 total_check <- summary_table_region |>
   filter(region == "TOTAL")
 
+rebio_near_check <- summary_table_region |>
+  filter(region == "REBIO + ADJACENT_REBIO")
+
+surroundings_check <- summary_table_region |>
+  filter(region == "SURROUNDINGS")
+
 stopifnot(
   total_check$n_localities == 43,
+  total_check$positive_localities == 15,
   total_check$effort_minutes == 8415,
-  total_check$positive_records == 173
+  total_check$positive_records == 173,
+
+  rebio_near_check$n_localities == 21,
+  rebio_near_check$positive_localities == 15,
+  rebio_near_check$effort_minutes == 4855,
+  rebio_near_check$positive_records == 173,
+
+  surroundings_check$n_localities == 22,
+  surroundings_check$positive_localities == 0,
+  surroundings_check$positive_records == 0
 )
 
 ################################################################################
@@ -177,9 +205,6 @@ write_csv(
   "outputs/key_summary_numbers.csv"
 )
 
-
-
-
 ################################################################################
 # 9. GT table for manuscript
 ################################################################################
@@ -188,6 +213,20 @@ library(gt)
 
 table_1_gt <- summary_table_region |>
   mutate(
+    region = case_when(
+      region %in% c(
+        "REBIO_ADJACENT",
+        "ADJACENT_REBIO"
+      ) ~ "ADJACENT TO REBIO",
+      
+      region %in% c(
+        "REBIO + REBIO_ADJACENT",
+        "REBIO + ADJACENT_REBIO"
+      ) ~ "REBIO + ADJACENT TO REBIO",
+      
+      TRUE ~ region
+    ),
+    
     prevalence_percent =
       paste0(prevalence_percent, "%"),
     
@@ -195,14 +234,6 @@ table_1_gt <- summary_table_region |>
       paste0(positive_records_percent, "%")
   ) |>
   gt() |>
-  
-  # tab_header(
-  #  # title = md("**Table 1. Regional summary of monitoring effort and prevalence of *Tubastraea coccinea***"),
-  #   subtitle = paste(
-  #     "Summary of monitored localities, prevalence, effort,",
-  #     "and positive one-minute records."
-  #   )
-  # ) |>
   
   cols_label(
     region = "Region",
@@ -216,16 +247,9 @@ table_1_gt <- summary_table_region |>
   ) |>
   
   fmt_number(
-    columns = c(effort_hours),
+    columns = effort_hours,
     decimals = 1
   ) |>
-  # 
-  # tab_source_note(
-  #   source_note = paste(
-  #     "Positive records correspond to one-minute transects",
-  #     "with the presence of T. coccinea."
-  #   )
-  # ) |>
   
   opt_table_font(
     font = list(
@@ -241,16 +265,13 @@ table_1_gt <- summary_table_region |>
     source_notes.font.size = px(10),
     data_row.padding = px(4)
   ) |>
+  
   tab_style(
     style = cell_text(weight = "bold"),
     locations = cells_body(
-      rows = region == "REBIO + NEAR_REBIO"
+      rows = region == "REBIO + ADJACENT TO REBIO"
     )
   )
-  
-
-
-
 
 table_1_gt
 
@@ -271,5 +292,23 @@ gtsave(
   "outputs/gt_tables/Table_1_regional_monitoring_summary.html"
 )
 
-
 # source("R/06_summary_table.R")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -204,6 +204,69 @@ stopifnot(
   )
 )
 
+################################################################################
+# 2.8. Regional classification consistency
+################################################################################
+
+# Internal analytical coding
+stopifnot(
+  setequal(
+    unique(site_year_metrics$region),
+    c(
+      "REBIO",
+      "ADJACENT_REBIO",
+      "SURROUNDINGS"
+    )
+  )
+)
+
+# Expected number of monitored localities in each region
+region_locality_check <- site_year_metrics |>
+  distinct(
+    localidade,
+    region
+  ) |>
+  count(
+    region,
+    name = "n_localities"
+  )
+
+stopifnot(
+  region_locality_check$n_localities[
+    region_locality_check$region == "REBIO"
+  ] == 15,
+  
+  region_locality_check$n_localities[
+    region_locality_check$region == "ADJACENT_REBIO"
+  ] == 6,
+  
+  region_locality_check$n_localities[
+    region_locality_check$region == "SURROUNDINGS"
+  ] == 22
+)
+
+# Publication-facing supplementary tables
+stopifnot(
+  setequal(
+    unique(table_s1_localities$region),
+    c(
+      "REBIO",
+      "ADJACENT TO REBIO",
+      "SURROUNDINGS"
+    )
+  ),
+  
+  setequal(
+    unique(table_s2_locality_metrics$region),
+    c(
+      "REBIO",
+      "ADJACENT TO REBIO",
+      "SURROUNDINGS"
+    )
+  )
+)
+
+
 
 ################################################################################
 # 3. FINAL SUMMARY

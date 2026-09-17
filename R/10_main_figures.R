@@ -50,7 +50,7 @@ depth_colors_fig2 <- c(
 
 region_levels_fig2 <- c(
   "REBIO",
-  "NEAR_REBIO",
+  "ADJACENT_REBIO",
   "SURROUNDINGS"
 )
 
@@ -156,7 +156,7 @@ figure_2 <- figure_2_data |>
     labeller = labeller(
       region = c(
         "REBIO" = "REBIO",
-        "NEAR_REBIO" = "NEAR REBIO",
+        "ADJACENT_REBIO" = "ADJ. REBIO",
         "SURROUNDINGS" = "SURROUNDINGS"
       )
     )
@@ -1564,6 +1564,10 @@ write_csv(
 #
 # Panel B:
 # weighted Relative Abundance Index (RAI-W)
+#
+# Regional identification:
+# - REBIO locality names = light-red background
+# - ADJACENT_REBIO locality names = plain text
 ################################################################################
 
 
@@ -1588,18 +1592,6 @@ depth_colors_fig5 <- c(
 
 ################################################################################
 # 5.2. Prepare minute-level data
-#
-# One row in df_monitoring_all = one minute.
-#
-# The denominator is calculated across ALL valid monitoring minutes for each
-# locality.
-#
-# Bathymetric strata partition only the DPUE and RAI-W numerators.
-#
-# Therefore:
-#
-# sum(depth-specific DPUE contributions) = pooled locality DPUE
-# sum(depth-specific RAI-W contributions) = pooled locality RAI-W
 ################################################################################
 
 figure_5_minutes <- df_monitoring_all |>
@@ -1660,7 +1652,9 @@ figure_5_minutes <- df_monitoring_all |>
 ################################################################################
 
 stopifnot(
-  nrow(figure_5_minutes) == 8415,
+  nrow(
+    figure_5_minutes
+  ) == 8415,
   
   sum(
     figure_5_minutes$dafor_num > 0,
@@ -1681,9 +1675,6 @@ stopifnot(
 
 ################################################################################
 # 5.4. Pooled locality metrics
-#
-# Pool numerators and total sampling effort before calculating the metrics.
-# This is the same locality-level logic used in Supplementary Table S2.
 ################################################################################
 
 figure_5_locality_totals <- figure_5_minutes |>
@@ -1794,11 +1785,6 @@ print(
 
 ################################################################################
 # 5.6. Numerators by bathymetric stratum
-#
-# All 173 positive records contain bathymetric information.
-#
-# Records without depth remain part of the locality-level sampling denominator
-# but contribute zero to the depth-specific numerators.
 ################################################################################
 
 figure_5_depth_numerators <- figure_5_minutes |>
@@ -1828,8 +1814,6 @@ figure_5_depth_numerators <- figure_5_minutes |>
 
 ################################################################################
 # 5.7. Restrict Figure 5 to positive localities
-#
-# Localities without detections remain reported in Supplementary Table S2b.
 ################################################################################
 
 figure_5_positive_localities <-
@@ -1843,6 +1827,23 @@ stopifnot(
   nrow(
     figure_5_positive_localities
   ) == 15
+)
+
+
+################################################################################
+# 5.7a. Check regional composition
+################################################################################
+
+stopifnot(
+  sum(
+    figure_5_positive_localities$region ==
+      "REBIO"
+  ) == 9,
+  
+  sum(
+    figure_5_positive_localities$region ==
+      "ADJACENT_REBIO"
+  ) == 6
 )
 
 
@@ -2005,8 +2006,6 @@ stopifnot(
 
 ################################################################################
 # 5.11. Check expected relationship between DPUE and RAI-W
-#
-# All DAFOR weights are <= 1 and both metrics use the same denominator.
 ################################################################################
 
 stopifnot(
@@ -2023,18 +2022,7 @@ stopifnot(
 
 ################################################################################
 # 5.12. Independent locality rankings
-#
-# IMPORTANT:
-#
-# Panel A is independently ranked by pooled DPUE.
-# Panel B is independently ranked by pooled RAI-W.
-#
-# Factor levels are stored from LOWEST to HIGHEST because ggplot displays the
-# final factor level at the top of a horizontal discrete axis.
 ################################################################################
-
-
-# DPUE ranking: highest to lowest for inspection
 
 figure_5_dpue_ranking <-
   figure_5_positive_localities |>
@@ -2046,8 +2034,6 @@ figure_5_dpue_ranking <-
     pooled_dpue
   )
 
-
-# RAI-W ranking: highest to lowest for inspection
 
 figure_5_raiw_ranking <-
   figure_5_positive_localities |>
@@ -2084,10 +2070,6 @@ print(
 # 5.13. Explicit factor orders for plotting
 ################################################################################
 
-
-# Ascending factor order:
-# lowest at bottom -> highest at top
-
 figure_5_dpue_order <-
   figure_5_positive_localities |>
   arrange(
@@ -2110,8 +2092,9 @@ figure_5_raiw_order <-
   as.character()
 
 
-# Separate plotting datasets are essential because each panel uses
-# an independent locality order.
+################################################################################
+# 5.13a. Separate plotting datasets
+################################################################################
 
 figure_5_plot_dpue <- figure_5_plot_values |>
   mutate(
@@ -2126,6 +2109,38 @@ figure_5_plot_raiw <- figure_5_plot_values |>
   mutate(
     localidade = factor(
       as.character(localidade),
+      levels = figure_5_raiw_order
+    )
+  )
+
+
+################################################################################
+# 5.13b. Locality-label datasets
+################################################################################
+
+figure_5_dpue_labels <-
+  figure_5_positive_localities |>
+  select(
+    localidade,
+    region
+  ) |>
+  mutate(
+    localidade = factor(
+      localidade,
+      levels = figure_5_dpue_order
+    )
+  )
+
+
+figure_5_raiw_labels <-
+  figure_5_positive_localities |>
+  select(
+    localidade,
+    region
+  ) |>
+  mutate(
+    localidade = factor(
+      localidade,
       levels = figure_5_raiw_order
     )
   )
@@ -2272,16 +2287,54 @@ figure_5_raiw_breaks <-
 
 
 ################################################################################
+# 5.15a. Space reserved for locality labels
+#
+# Negative x values are used only for locality names.
+# Bars still begin at x = 0.
+################################################################################
+
+figure_5_dpue_label_x <-
+  -0.03 *
+  figure_5_dpue_xmax
+
+
+figure_5_dpue_xmin <-
+  -0.42 *
+  figure_5_dpue_xmax
+
+
+figure_5_raiw_label_x <-
+  -0.03 *
+  figure_5_raiw_xmax
+
+
+figure_5_raiw_xmin <-
+  -0.42 *
+  figure_5_raiw_xmax
+
+
+################################################################################
 # 5.16. Common theme
 ################################################################################
 
 theme_figure_5 <- theme(
+  
+  # No panel background
   panel.background =
     element_blank(),
   
-  panel.grid =
+  # IMPORTANT: remove border around plotting panel
+  panel.border =
     element_blank(),
   
+  # No grid lines
+  panel.grid.major =
+    element_blank(),
+  
+  panel.grid.minor =
+    element_blank(),
+  
+  # Keep x-axis tick marks
   axis.ticks.length.x =
     unit(
       0.2,
@@ -2294,15 +2347,21 @@ theme_figure_5 <- theme(
       linewidth = 0.8
     ),
   
+  # Remove ALL horizontal axis lines
   axis.line.x =
-    element_line(
-      colour = "grey",
-      linewidth = 0.8
-    ),
+    element_blank(),
   
+  axis.line.x.top =
+    element_blank(),
+  
+  axis.line.x.bottom =
+    element_blank(),
+  
+  # No y-axis ticks
   axis.ticks.y =
     element_blank(),
   
+  # X-axis title
   axis.title.x.top =
     element_text(
       size = 14
@@ -2311,15 +2370,15 @@ theme_figure_5 <- theme(
   axis.title.y =
     element_blank(),
   
+  # X-axis values
   axis.text.x =
     element_text(
       size = 12
     ),
   
+  # Locality names are drawn manually
   axis.text.y =
-    element_text(
-      size = 12
-    ),
+    element_blank(),
   
   legend.title =
     element_text(
@@ -2346,11 +2405,8 @@ theme_figure_5 <- theme(
     )
 )
 
-
 ################################################################################
 # 5.17. Panel A - DPUE
-#
-# Independently ordered by pooled DPUE.
 ################################################################################
 
 plot_figure_5a <- ggplot(
@@ -2361,10 +2417,98 @@ plot_figure_5a <- ggplot(
     fill = depth_stratum
   )
 ) +
+  
   geom_col(
     position = "stack",
     width = 0.8
   ) +
+  
+  # Top axis line only over the DPUE plotting area
+  annotate(
+    "segment",
+    x = 0,
+    xend = figure_5_dpue_xmax,
+    y = Inf,
+    yend = Inf,
+    colour = "grey",
+    linewidth = 0.8
+  ) +
+  
+  ##############################################################################
+# REBIO LOCALITY NAMES
+#
+# >>> BACKGROUND COLOUR IS DEFINED HERE <<<
+#
+# Change:
+# fill = "#F6D6D6"
+#
+# if you want another red.
+##############################################################################
+
+geom_label(
+  data =
+    figure_5_dpue_labels |>
+    filter(
+      region == "REBIO"
+    ),
+  
+  aes(
+    x = figure_5_dpue_label_x,
+    y = localidade,
+    label = localidade
+  ),
+  
+  inherit.aes = FALSE,
+  
+  hjust = 1,
+  
+  fill = "grey85",       # <<< REBIO LABEL BACKGROUND COLOUR
+  colour = "grey15",
+  
+  size = 3.6,
+  
+  label.padding =
+    unit(
+      0.10,
+      "lines"
+    ),
+  
+  label.r =
+    unit(
+      0.04,
+      "lines"
+    ),
+  
+  linewidth = 0
+) +
+  
+  ##############################################################################
+# ADJACENT TO REBIO LOCALITY NAMES
+##############################################################################
+
+geom_text(
+  data =
+    figure_5_dpue_labels |>
+    filter(
+      region == "ADJACENT_REBIO"
+    ),
+  
+  aes(
+    x = figure_5_dpue_label_x,
+    y = localidade,
+    label = localidade
+  ),
+  
+  inherit.aes = FALSE,
+  
+  hjust = 1,
+  
+  colour = "grey15",
+  
+  size = 3.6
+) +
+  
+ 
   
   scale_y_discrete(
     limits = figure_5_dpue_order
@@ -2383,11 +2527,6 @@ plot_figure_5a <- ggplot(
   scale_x_continuous(
     position = "top",
     
-    limits = c(
-      0,
-      figure_5_dpue_xmax
-    ),
-    
     breaks =
       figure_5_dpue_breaks,
     
@@ -2396,6 +2535,13 @@ plot_figure_5a <- ggplot(
         0,
         0.02
       )
+    )
+  ) +
+  
+  coord_cartesian(
+    xlim = c(
+      figure_5_dpue_xmin,
+      figure_5_dpue_xmax
     )
   ) +
   
@@ -2409,8 +2555,6 @@ plot_figure_5a <- ggplot(
 
 ################################################################################
 # 5.18. Panel B - RAI-W
-#
-# Independently ordered by pooled RAI-W.
 ################################################################################
 
 plot_figure_5b <- ggplot(
@@ -2421,10 +2565,92 @@ plot_figure_5b <- ggplot(
     fill = depth_stratum
   )
 ) +
+  
   geom_col(
     position = "stack",
     width = 0.8
   ) +
+  # Horizontal axis line below numbers,
+  # only from RAI-W = 0 to the maximum
+  annotate(
+    "segment",
+    x = 0,
+    xend = figure_5_raiw_xmax,
+    y = Inf,
+    yend = Inf,
+    colour = "grey",
+    linewidth = 0.8
+  ) +
+  ##############################################################################
+# REBIO LOCALITY NAMES
+#
+# >>> SAME BACKGROUND COLOUR HERE <<<
+##############################################################################
+
+geom_label(
+  data =
+    figure_5_raiw_labels |>
+    filter(
+      region == "REBIO"
+    ),
+  
+  aes(
+    x = figure_5_raiw_label_x,
+    y = localidade,
+    label = localidade
+  ),
+  
+  inherit.aes = FALSE,
+  
+  hjust = 1,
+  
+  fill = "grey85",       # <<< REBIO LABEL BACKGROUND COLOUR
+  colour = "grey15",
+  
+  size = 3.6,
+  
+  label.padding =
+    unit(
+      0.10,
+      "lines"
+    ),
+  
+  label.r =
+    unit(
+      0.04,
+      "lines"
+    ),
+  
+  linewidth = 0
+) +
+  
+  ##############################################################################
+# ADJACENT TO REBIO LOCALITY NAMES
+##############################################################################
+
+geom_text(
+  data =
+    figure_5_raiw_labels |>
+    filter(
+      region == "ADJACENT_REBIO"
+    ),
+  
+  aes(
+    x = figure_5_raiw_label_x,
+    y = localidade,
+    label = localidade
+  ),
+  
+  inherit.aes = FALSE,
+  
+  hjust = 1,
+  
+  colour = "grey15",
+  
+  size = 3.6
+) +
+  
+
   
   scale_y_discrete(
     limits = figure_5_raiw_order
@@ -2443,11 +2669,6 @@ plot_figure_5b <- ggplot(
   scale_x_continuous(
     position = "top",
     
-    limits = c(
-      0,
-      figure_5_raiw_xmax
-    ),
-    
     breaks =
       figure_5_raiw_breaks,
     
@@ -2456,6 +2677,13 @@ plot_figure_5b <- ggplot(
         0,
         0.02
       )
+    )
+  ) +
+  
+  coord_cartesian(
+    xlim = c(
+      figure_5_raiw_xmin,
+      figure_5_raiw_xmax
     )
   ) +
   
@@ -2546,6 +2774,8 @@ write_csv(
 # end Figure 5
 ################################################################################
 
+
+
 ################################################################################
 # FIGURE 6
 # Export locality-level data for map preparation in QGIS
@@ -2554,7 +2784,6 @@ write_csv(
 # This section exports the final pooled DPUE and RAI-W values used for mapping.
 ################################################################################
 
-
 ################################################################################
 # 6.1. Prepare QGIS table
 #
@@ -2562,13 +2791,42 @@ write_csv(
 # in Figure 5, ensuring that Figures 5 and 6 use exactly the same DPUE and RAI-W
 # calculations.
 #
+# Locality abbreviations are added for map labelling in QGIS.
+#
 # All 43 monitored localities are retained, including localities with no
-# detections.
+# detections. Abbreviations are assigned to the 21 localities represented
+# in the detailed Figure 6 panels.
 ################################################################################
 
 figure_6_qgis <- figure_5_locality_totals |>
   transmute(
     localidade,
+    
+    locality_abbr = case_when(
+      localidade == "BAIA DAS TARTARUGAS"  ~ "BT",
+      localidade == "ENGENHO"              ~ "ENG",
+      localidade == "FAROL"                ~ "FAR",
+      localidade == "SACO DO BATISMO"      ~ "SB",
+      localidade == "SACO DO CAPIM"        ~ "SC",
+      localidade == "VIDAL"                ~ "VID",
+      localidade == "COSTA DO ELEFANTE"    ~ "CE",
+      localidade == "COSTAO DO SACO DAGUA" ~ "CSD",
+      localidade == "DESERTA NORTE"        ~ "DN",
+      localidade == "DESERTA SUL"          ~ "DS",
+      localidade == "ENSEADA DO LILI"      ~ "EL",
+      localidade == "LETREIRO"             ~ "LET",
+      localidade == "NAUFRAGIO DO LILI"    ~ "NL",
+      localidade == "PEDRA DO ELEFANTE"    ~ "PE",
+      localidade == "PORTINHO NORTE"       ~ "PN",
+      localidade == "PORTINHO SUL"         ~ "PS",
+      localidade == "RANCHO NORTE"         ~ "RN",
+      localidade == "SACO DA MULATA NORTE" ~ "SMN",
+      localidade == "SACO DA MULATA SUL"   ~ "SMS",
+      localidade == "SACO DAGUA"           ~ "SD",
+      localidade == "SAQUINHO DAGUA"       ~ "SQD",
+      TRUE                                 ~ NA_character_
+    ),
+    
     region,
     
     effort_minutes =
@@ -2597,6 +2855,7 @@ figure_6_qgis <- figure_5_locality_totals |>
     localidade
   )
 
+    
 
 ################################################################################
 # 6.2. Checks
@@ -2637,12 +2896,54 @@ stopifnot(
     is.na(
       figure_6_qgis$raiw
     )
-  ) == 0
+  ) == 0,
+  
+  # The 21 localities represented in the detailed Figure 6 panels
+  # must have abbreviations.
+  sum(
+    !is.na(
+      figure_6_qgis$locality_abbr
+    )
+  ) == 21,
+  
+  # All abbreviations must be unique.
+  n_distinct(
+    figure_6_qgis$locality_abbr,
+    na.rm = TRUE
+  ) == 21
 )
 
 
 ################################################################################
-# 6.3. Check regional occurrence
+# 6.3. Check locality abbreviations
+################################################################################
+
+figure_6_abbr_check <- figure_6_qgis |>
+  filter(
+    !is.na(locality_abbr)
+  ) |>
+  select(
+    locality_abbr,
+    localidade,
+    region
+  ) |>
+  arrange(
+    locality_abbr
+  )
+
+
+cat(
+  "\nFigure 6 locality abbreviations\n"
+)
+
+print(
+  figure_6_abbr_check,
+  n = Inf
+)
+
+
+################################################################################
+# 6.4. Check regional occurrence
 ################################################################################
 
 figure_6_region_check <- figure_6_qgis |>
@@ -2683,7 +2984,7 @@ print(
 
 
 ################################################################################
-# 6.4. Check mapped metric rankings
+# 6.5. Check mapped metric rankings
 ################################################################################
 
 figure_6_dpue_check <- figure_6_qgis |>
@@ -2695,6 +2996,7 @@ figure_6_dpue_check <- figure_6_qgis |>
   ) |>
   select(
     localidade,
+    locality_abbr,
     dpue
   )
 
@@ -2708,6 +3010,7 @@ figure_6_raiw_check <- figure_6_qgis |>
   ) |>
   select(
     localidade,
+    locality_abbr,
     raiw
   )
 
@@ -2733,7 +3036,7 @@ print(
 
 
 ################################################################################
-# 6.5. Export QGIS source table
+# 6.6. Export QGIS source table
 ################################################################################
 
 write_csv(
@@ -2745,4 +3048,3 @@ write_csv(
 ################################################################################
 # end Figure 6
 ################################################################################
-

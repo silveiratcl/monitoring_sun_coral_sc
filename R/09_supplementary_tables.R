@@ -113,6 +113,9 @@ unlink(
 # The shoreline reference file contains more localities than were sampled in
 # 2022-2025. Therefore, Table S1 is restricted to the 43 localities represented
 # in the final monitoring dataset.
+#
+# Locality abbreviations used in Figure 6 are included for the 21 localities
+# represented in the detailed map panels.
 ################################################################################
 
 monitored_localities <- site_year_metrics |>
@@ -120,6 +123,7 @@ monitored_localities <- site_year_metrics |>
     localidade,
     region
   )
+
 
 table_s1_localities <- monitored_localities |>
   left_join(
@@ -131,18 +135,78 @@ table_s1_localities <- monitored_localities |>
       ),
     by = "localidade"
   ) |>
+  mutate(
+    region = recode(
+      region,
+      "ADJACENT_REBIO" = "ADJACENT TO REBIO"
+    ),
+    
+    locality_abbr = case_when(
+      localidade == "BAIA DAS TARTARUGAS"  ~ "BT",
+      localidade == "ENGENHO"              ~ "ENG",
+      localidade == "FAROL"                ~ "FAR",
+      localidade == "SACO DO BATISMO"      ~ "SB",
+      localidade == "SACO DO CAPIM"        ~ "SC",
+      localidade == "VIDAL"                ~ "VID",
+      localidade == "COSTA DO ELEFANTE"    ~ "CE",
+      localidade == "COSTAO DO SACO DAGUA" ~ "CSD",
+      localidade == "DESERTA NORTE"        ~ "DN",
+      localidade == "DESERTA SUL"          ~ "DS",
+      localidade == "ENSEADA DO LILI"      ~ "EL",
+      localidade == "LETREIRO"             ~ "LET",
+      localidade == "NAUFRAGIO DO LILI"    ~ "NL",
+      localidade == "PEDRA DO ELEFANTE"    ~ "PE",
+      localidade == "PORTINHO NORTE"       ~ "PN",
+      localidade == "PORTINHO SUL"         ~ "PS",
+      localidade == "RANCHO NORTE"         ~ "RN",
+      localidade == "SACO DA MULATA NORTE" ~ "SMN",
+      localidade == "SACO DA MULATA SUL"   ~ "SMS",
+      localidade == "SACO DAGUA"           ~ "SD",
+      localidade == "SAQUINHO DAGUA"       ~ "SQD",
+      TRUE                                 ~ NA_character_
+    )
+  ) |>
   arrange(
     region,
     localidade
   ) |>
   rename(
     locality = localidade
+  ) |>
+  select(
+    locality,
+    locality_abbr,
+    region,
+    shoreline_extent_m,
+    shoreline_units_100m
   )
+
 
 stopifnot(
   nrow(table_s1_localities) == 43,
-  sum(is.na(table_s1_localities$shoreline_extent_m)) == 0,
-  sum(is.na(table_s1_localities$shoreline_units_100m)) == 0
+  
+  sum(
+    is.na(
+      table_s1_localities$shoreline_extent_m
+    )
+  ) == 0,
+  
+  sum(
+    is.na(
+      table_s1_localities$shoreline_units_100m
+    )
+  ) == 0,
+  
+  sum(
+    !is.na(
+      table_s1_localities$locality_abbr
+    )
+  ) == 21,
+  
+  n_distinct(
+    table_s1_localities$locality_abbr,
+    na.rm = TRUE
+  ) == 21
 )
 
 ################################################################################
@@ -195,6 +259,11 @@ table_s2_locality_metrics <- site_year_metrics |>
     .groups = "drop"
   ) |>
   mutate(
+    region = recode(
+      region,
+      "ADJACENT_REBIO" = "ADJACENT TO REBIO"
+    ),
+    
     pooled_denominator =
       total_effort_hours *
       shoreline_units_100m,
@@ -510,6 +579,7 @@ if (can_export_gt_png) {
     ) |>
     gt::cols_label(
       locality = "Locality",
+      locality_abbr = "Map code",
       region = "Region",
       shoreline_extent_m = "Shoreline extent (m)",
       shoreline_units_100m = "100 m units"
@@ -771,3 +841,4 @@ print(
   table_s4b_effort_standardised,
   n = Inf
 )
+

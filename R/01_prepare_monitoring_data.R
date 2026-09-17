@@ -122,7 +122,7 @@ df_monit <- df_monit |>
         "FAROL",
         "ENGENHO",
         "SACO DO CAPIM"
-      ) ~ "NEAR_REBIO",
+      ) ~ "ADJACENT_REBIO",
       
       TRUE ~ "SURROUNDINGS"
     )
