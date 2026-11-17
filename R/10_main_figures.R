@@ -569,7 +569,7 @@ plot_figure_3b <- ggplot(
   ) +
   labs(
     x = "Depth (m)",
-    y = "Sampling effort"
+    y = "Transect equivalents"
   ) +
   scale_y_continuous(
     limits = c(
